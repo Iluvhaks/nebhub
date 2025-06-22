@@ -301,39 +301,18 @@ FTAPTab:CreateToggle({Name="AntiGrab", CurrentValue=antiGrabEnabled, Callback=fu
     antiGrabEnabled = v
 end})
 
--- SPAWN KILL ALL REVISED
+-- SPAWN KILL ALL TO VOID
 FTAPTab:CreateToggle({Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback=function(value)
     spawnKillAll = value
     if spawnKillAll then
         spawn(function()
-            -- Try to find the blue water kill zone by name or color
-            local water = workspace:FindFirstChild("Water") or workspace:FindFirstChild("KillPart") or workspace:FindFirstChild("KillZone")
-            
-            -- If no kill zone found, notify and stop
-            if not water then
-                -- Try to find water by looking for a large blue BasePart
-                for _, part in pairs(workspace:GetDescendants()) do
-                    if part:IsA("BasePart") and part.Size.Magnitude > 20 and part.BrickColor == BrickColor.new("Bright blue") then
-                        water = part
-                        break
-                    end
-                end
-            end
-            
-            if not water then
-                Rayfield:Notify({Title="Spawn Kill All", Content="Water kill zone not found!", Duration=3})
-                spawnKillAll = false
-                return
-            end
-            
-            local waterPos = water.Position + Vector3.new(0, 5, 0) -- above water
-            
+            local voidY = -500 -- Y-position for void, adjust as needed
             while spawnKillAll do
                 for _, player in pairs(Players:GetPlayers()) do
                     if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                         local hrp = player.Character.HumanoidRootPart
 
-                        -- GrabPart system (adjust names if your game differs)
+                        -- Find available grab parts to grab player
                         local grabParts = nil
                         for _, m in pairs(workspace:GetChildren()) do
                             if m.Name == "GrabParts" and m:FindFirstChild("GrabPart") then
@@ -347,12 +326,11 @@ FTAPTab:CreateToggle({Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback
 
                         if grabParts then
                             local grabPart = grabParts.GrabPart
-
-                            -- Position grab part above player to grab
+                            -- Position grab part above player
                             grabPart.CFrame = hrp.CFrame * CFrame.new(0, 5, 0)
                             task.wait(0.1)
 
-                            -- Fire touch events to grab player (works on mobile too)
+                            -- Fire touch to grab player (mobile compatible)
                             pcall(function()
                                 firetouchinterest(hrp, grabPart, 0)
                                 firetouchinterest(hrp, grabPart, 1)
@@ -360,8 +338,8 @@ FTAPTab:CreateToggle({Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback
 
                             task.wait(0.3)
 
-                            -- Teleport the grabbed player to water kill zone
-                            hrp.CFrame = CFrame.new(waterPos)
+                            -- Teleport player to void
+                            hrp.CFrame = CFrame.new(hrp.Position.X, voidY, hrp.Position.Z)
 
                             task.wait(0.3)
 

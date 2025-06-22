@@ -1,5 +1,3 @@
--- Nebula Hub Universal Full Script with Fixed TSB Autofarm
-
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 if not Rayfield then return warn("Failed to load Rayfield UI.") end
 
@@ -9,9 +7,7 @@ local UserInput = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 local Camera = workspace.CurrentCamera
-local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
-
 local LocalPlayer = Players.LocalPlayer
 
 -- STATE VARIABLES
@@ -30,10 +26,12 @@ local flingAll = false
 -- AUTOFARM TSB VARIABLES
 local autofarmEnabled = false
 local targetPlayer = nil
-local moveConnection = nil
 local attackRemotes = {}
 
--- MAIN UI
+-- FLY state for autofarm safe tp
+local flyEnabled = false
+
+-- UI WINDOW
 local Window = Rayfield:CreateWindow({
     Name = "Nebula Hub Universal",
     LoadingTitle = "Nebula Hub Universal",
@@ -189,6 +187,9 @@ VisualTab:CreateToggle({Name="AutoShoot", CurrentValue=false, Callback=function(
 VisualTab:CreateDropdown({Name="Target Part", Options={"Head","HumanoidRootPart","Torso"}, CurrentOption="Head", Callback=function(v) TargetPart=v end})
 VisualTab:CreateSlider({Name="Aimbot FOV", Range={50,300}, CurrentValue=100, Callback=function(v) AimFOV=v end})
 
+-- ESP Objects Table
+local espObjects = {}
+
 -- Get closest enemy for Aimbot
 local function getClosestEnemy()
     local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
@@ -254,23 +255,28 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    if AimbotOn then
+    if AimbotOn and autofarmEnabled and targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild(TargetPart) then
+        local tp = targetPlayer.Character[TargetPart].Position
+        Camera.CFrame = CFrame.new(camPos, tp)
+    elseif AimbotOn then
         local tgt = getClosestEnemy()
         if tgt and tgt.Character and tgt.Character:FindFirstChild(TargetPart) then
             local tp = tgt.Character[TargetPart].Position
             Camera.CFrame = CFrame.new(camPos, tp)
+        end
+    end
 
-            if AutoShoot then
-                if shootRemote then pcall(shootRemote.FireServer, shootRemote) else findShootRemote() end
-                if UserInput.TouchEnabled then
-                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                        if gui:IsA("ImageButton") and gui.Name:lower():find("shoot") and gui.Visible then
-                            pcall(function() gui:Activate() end); break
-                        end
-                    end
+    if AutoShoot and shootRemote then
+        pcall(shootRemote.FireServer, shootRemote)
+        if UserInput.TouchEnabled then
+            for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                if gui:IsA("ImageButton") and gui.Name:lower():find("shoot") and gui.Visible then
+                    pcall(function() gui:Activate() end); break
                 end
             end
         end
+    elseif AutoShoot and not shootRemote then
+        findShootRemote()
     end
 end)
 
@@ -313,11 +319,7 @@ end})
 
 FTAPTab:CreateToggle({Name="AntiGrab", CurrentValue=antiGrabEnabled, Callback=function(v)
     antiGrabEnabled = v
-    if antiGrabEnabled then
-        Rayfield:Notify({Title="AntiGrab", Content="Enabled", Duration=2})
-    else
-        Rayfield:Notify({Title="AntiGrab", Content="Disabled", Duration=2})
-    end
+    Rayfield:Notify({Title="AntiGrab", Content=(v and "Enabled" or "Disabled"), Duration=2})
 end})
 
 FTAPTab:CreateToggle({Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback=function(value)
@@ -334,10 +336,8 @@ FTAPTab:CreateToggle({Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback
                 task.wait(1)
             end
         end)
-        Rayfield:Notify({Title="Spawn Kill All", Content="Enabled", Duration=2})
-    else
-        Rayfield:Notify({Title="Spawn Kill All", Content="Disabled", Duration=2})
     end
+    Rayfield:Notify({Title="Spawn Kill All", Content=(value and "Enabled" or "Disabled"), Duration=2})
 end})
 
 FTAPTab:CreateToggle({Name="Fling All", CurrentValue=flingAll, Callback=function(value)
@@ -369,10 +369,8 @@ FTAPTab:CreateToggle({Name="Fling All", CurrentValue=flingAll, Callback=function
                 task.wait(0.5)
             end
         end)
-        Rayfield:Notify({Title="Fling All", Content="Enabled", Duration=2})
-    else
-        Rayfield:Notify({Title="Fling All", Content="Disabled", Duration=2})
     end
+    Rayfield:Notify({Title="Fling All", Content=(value and "Enabled" or "Disabled"), Duration=2})
 end})
 
 -- FTAP release detection and AntiGrab implementation
@@ -383,7 +381,6 @@ workspace.ChildAdded:Connect(function(m)
         if weld and antiGrabEnabled then
             weld:Destroy()
         end
-        -- Additional safeguard: break weld if created again
         m:GetPropertyChangedSignal("Parent"):Connect(function()
             if not m.Parent and flingEnabled then
                 local lastInput = UserInput:GetLastInputType()
@@ -402,9 +399,8 @@ workspace.ChildAdded:Connect(function(m)
     end
 end)
 
--- TSB TAB: Autofarm with continuous tween & mobile attack spam
+-- TSB TAB: Autofarm
 
--- Find remotes only once
 local function findAttackRemotes()
     attackRemotes = {}
     for _, obj in pairs(ReplicatedStorage:GetDescendants()) do
@@ -419,49 +415,43 @@ end
 
 findAttackRemotes()
 
-local function startFollowTarget(targetPart)
-    if moveConnection then
-        moveConnection:Disconnect()
-        moveConnection = nil
-    end
+local TweenService = game:GetService("TweenService")
 
+local regenPos = Vector3.new(0, 50, 0) -- safe regen spot (customize as needed)
+
+local function flyEnable()
+    if flyEnabled then return end
+    flyEnabled = true
     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp or not targetPart then return end
-
-    moveConnection = RunService.Heartbeat:Connect(function(dt)
-        if not hrp.Parent or not targetPart.Parent then
-            moveConnection:Disconnect()
-            moveConnection = nil
-            return
-        end
-
-        local direction = (targetPart.Position - hrp.Position)
-        local distance = direction.Magnitude
-
-        if distance > 3 then
-            local moveStep = direction.Unit * 100 * dt
-            if moveStep.Magnitude > distance then
-                moveStep = direction
+    if not hrp then return end
+    local bv = Instance.new("BodyVelocity")
+    bv.Name = "FlyBV"
+    bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    bv.Velocity = Vector3.new(0, 0, 0)
+    bv.Parent = hrp
+    task.spawn(function()
+        while flyEnabled and hrp.Parent do
+            local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                if humanoid.Health <= humanoid.MaxHealth * 0.35 then
+                    bv.Velocity = Vector3.new(0, 50, 0)
+                else
+                    bv.Velocity = Vector3.new(0, 0, 0)
+                end
             end
-            hrp.CFrame = hrp.CFrame + moveStep
+            task.wait(0.1)
         end
+        bv:Destroy()
+        flyEnabled = false
     end)
 end
 
-local function stopFollowTarget()
-    if moveConnection then
-        moveConnection:Disconnect()
-        moveConnection = nil
-    end
-end
-
-local function teleportToRegen()
-    local safePos = workspace:FindFirstChild("SpawnLocation") or workspace:FindFirstChild("Spawn")
-    local pos = safePos and safePos.Position + Vector3.new(0, 100, 0) or Vector3.new(0, 100, 0)
-
+local function flyDisable()
+    flyEnabled = false
     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if hrp then
-        hrp.CFrame = CFrame.new(pos)
+        local bv = hrp:FindFirstChild("FlyBV")
+        if bv then bv:Destroy() end
     end
 end
 
@@ -474,134 +464,122 @@ local function attackTarget(target)
     local targetHum = target.Character:FindFirstChildOfClass("Humanoid")
     if not targetHum or targetHum.Health <= 0 then return false end
 
-    -- VirtualUser click for mobile
+    -- Enable fly if low health
+    if hum.Health <= hum.MaxHealth * 0.35 then
+        flyEnable()
+        -- Teleport to safe spot
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.CFrame = CFrame.new(regenPos)
+        end
+        return false
+    else
+        flyDisable()
+    end
+
+    -- Tween repeatedly to target's HumanoidRootPart
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp or not targetHRP then return false end
+
+    -- Tween smoothly towards target's HRP and repeat in coroutine
+    coroutine.wrap(function()
+        while autofarmEnabled and targetHum.Health > 0 and hum.Health > 0 do
+            local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Linear)
+            local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetHRP.CFrame * CFrame.new(0, 3, 2)})
+            tween:Play()
+            tween.Completed:Wait()
+            task.wait(0.1)
+        end
+    end)()
+
+    -- Simulate virtual user click at screen center
+    local screenCenter = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     pcall(function()
-        VirtualUser:Button1Down(Vector2.new(0, 0))
-        task.wait(0.05)
-        VirtualUser:Button1Up(Vector2.new(0, 0))
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton1(screenCenter)
     end)
 
-    -- Fire all remotes (M1, ability 1-4)
+    -- Fire attack remotes with proper argument
     for _, remote in pairs(attackRemotes) do
         pcall(function()
             if remote:IsA("RemoteEvent") then
-                remote:FireServer(target.Character)
+                if targetHRP then
+                    remote:FireServer(targetHRP)
+                else
+                    remote:FireServer(target)
+                end
             elseif remote:IsA("RemoteFunction") then
-                remote:InvokeServer(target.Character)
+                if targetHRP then
+                    remote:InvokeServer(targetHRP)
+                else
+                    remote:InvokeServer(target)
+                end
             end
+        end)
+    end
+
+    -- Simulate ability key presses 1 to 4 via VirtualUser (mobile support)
+    for i = 1, 4 do
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:SetKeyDown(Enum.KeyCode["One" .. tostring(i)])
+            VirtualUser:SetKeyUp(Enum.KeyCode["One" .. tostring(i)])
         end)
     end
 
     return true
 end
 
-local function autofarmLoop()
-    while autofarmEnabled do
-        local playersList = {}
+local function findTargetPlayer()
+    local bestDist = math.huge
+    local bestPlayer = nil
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
 
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChildOfClass("Humanoid") and p.Character.Humanoid.Health > 0 then
-                table.insert(playersList, p)
-            end
-        end
-
-        for _, p in ipairs(playersList) do
-            if not autofarmEnabled then break end
-
-            targetPlayer = p
-
-            local targetHrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-            if not targetHrp then continue end
-
-            startFollowTarget(targetHrp)
-
-            task.wait(0.3)
-
-            while autofarmEnabled and p.Character and p.Character:FindFirstChildOfClass("Humanoid") and p.Character.Humanoid.Health > 0 do
-                local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-                if not hum or hum.Health <= 0 then break end
-
-                if hum.Health / hum.MaxHealth < 0.35 then
-                    stopFollowTarget()
-                    teleportToRegen()
-                    repeat task.wait(1) hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") until (hum and hum.Health / hum.MaxHealth >= 0.5) or not autofarmEnabled
-                    if not autofarmEnabled then break end
-                    if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                        startFollowTarget(p.Character.HumanoidRootPart)
-                        task.wait(0.3)
-                    else
-                        break
-                    end
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local targetHum = p.Character:FindFirstChildOfClass("Humanoid")
+            local localHum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if targetHum and targetHum.Health > 0 and localHum and localHum.Health > 0 then
+                local dist = (hrp.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                if dist < bestDist then
+                    bestDist = dist
+                    bestPlayer = p
                 end
-
-                attackTarget(p)
-
-                task.wait(0.15)
             end
-
-            stopFollowTarget()
-            task.wait(0.5)
         end
-
-        task.wait(1)
     end
-    stopFollowTarget()
+
+    return bestPlayer
 end
 
-TSBTab:CreateToggle({Name="Enable Autofarm (TSB)", CurrentValue=false, Callback=function(v)
-    autofarmEnabled = v
-    if autofarmEnabled then
-        spawn(autofarmLoop)
-        Rayfield:Notify({Title="TSB Autofarm", Content="Enabled", Duration=2})
-    else
-        Rayfield:Notify({Title="TSB Autofarm", Content="Disabled", Duration=2})
-        stopFollowTarget()
-    end
-end})
-
-TSBTab:CreateButton({Name="Stop Autofarm (TSB)", Callback=function()
-    autofarmEnabled = false
-    stopFollowTarget()
-    Rayfield:Notify({Title="TSB Autofarm", Content="Stopped", Duration=2})
-end})
-
--- KEY SYSTEM
-
-local key = "Nebula1825"
-
-local function requestKey()
-    local Input = Window:CreateKeySystem({
-        Title = "Nebula Hub Key",
-        Subtitle = "Enter your key",
-        Note = "Join Discord for key",
-        FileName = "NebulaKeyFile",
-        Key = key,
-        SuccessCallback = function()
-            Rayfield:Notify({Title="Key System", Content="Key Accepted!", Duration=3})
-        end,
-        FailureCallback = function()
-            Rayfield:Notify({Title="Key System", Content="Incorrect Key!", Duration=3})
-            requestKey()
-        end,
-        KeepKey = true,
-        Discord = {
-            Enabled = true,
-            Invite = "https://discord.gg/FeAkp5e7d5",
-            RememberJoins = true
-        }
-    })
-
-    local copyBtn = Window:CreateButton({
-        Name = "Copy Discord Link",
-        Callback = function()
-            setclipboard("https://discord.gg/FeAkp5e7d5")
-            Rayfield:Notify({Title="Clipboard", Content="Discord link copied!", Duration=2})
+TSBTab:CreateToggle({
+    Name = "Enable Autofarm TSB",
+    CurrentValue = false,
+    Flag = "AutoFarmTSB",
+    Callback = function(value)
+        autofarmEnabled = value
+        if autofarmEnabled then
+            Rayfield:Notify({Title = "Autofarm", Content = "Started Autofarming!", Duration = 3})
+            spawn(function()
+                while autofarmEnabled do
+                    targetPlayer = findTargetPlayer()
+                    if targetPlayer then
+                        attackTarget(targetPlayer)
+                    else
+                        task.wait(1)
+                    end
+                    task.wait(0.15)
+                end
+            end)
+        else
+            flyDisable()
+            Rayfield:Notify({Title = "Autofarm", Content = "Stopped Autofarming!", Duration = 3})
         end
-    })
-end
+    end
+})
 
-requestKey()
-
-Rayfield:LoadConfiguration()
+Rayfield:Notify({Title="Nebula Hub Universal", Content="Loaded Successfully", Duration=4})
 
 -- END OF SCRIPT

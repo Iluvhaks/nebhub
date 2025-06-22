@@ -1,5 +1,3 @@
--- Nebula Hub Universal – Full Updated Script (Key System Removed)
-
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 if not Rayfield then return warn("Failed to load Rayfield UI.") end
 
@@ -19,6 +17,7 @@ local InfJump, remLag = false, false
 local espObjects = {}
 local flingEnabled, flingStrength = false, 350
 local shootRemote = nil
+
 local antiGrabEnabled = false
 local spawnKillAll = false
 local flingAll = false
@@ -32,7 +31,7 @@ local Window = Rayfield:CreateWindow({
     ToggleUIKeybind = Enum.KeyCode.K,
     ConfigurationSaving = {Enabled=true, FileName="NebulaHubUniversal"},
     Discord = {Enabled=true, Invite="yTxgQcTUw4", RememberJoins=true},
-    KeySystem = false -- Disabled key system
+    KeySystem = false
 })
 
 -- TABS
@@ -102,28 +101,44 @@ end})
 
 -- TROLL
 Troll:CreateButton({Name="Fake Kick", Callback=function() LocalPlayer:Kick("Fake Kick - Nebula Hub Universal") end})
+
 Troll:CreateButton({Name="Chat Spam", Callback=function()
     spawn(function() while task.wait(0.25) do
         pcall(function() ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer("Nebula Hub OP!","All") end)
     end end)
 end})
+
 Troll:CreateButton({Name="Fling Self", Callback=function()
     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then local bv=Instance.new("BodyVelocity",hrp); bv.Velocity=Vector3.new(9999,9999,9999); bv.MaxForce=Vector3.new(math.huge,math.huge,math.huge); task.wait(0.5); bv:Destroy() end
+    if hrp then
+        local bv=Instance.new("BodyVelocity",hrp)
+        bv.Velocity=Vector3.new(9999,9999,9999)
+        bv.MaxForce=Vector3.new(math.huge,math.huge,math.huge)
+        task.wait(0.5)
+        bv:Destroy()
+    end
 end})
 
 -- AUTO
 AutoTab:CreateButton({Name="Auto Move", Callback=function()
     _G.AutoMove = true; spawn(function()
-        while _G.AutoMove do if LocalPlayer.Character then LocalPlayer.Character:MoveTo(Vector3.new(math.random(-100,100),10,math.random(-100,100))) end; task.wait(0.8) end
+        while _G.AutoMove do
+            if LocalPlayer.Character then 
+                LocalPlayer.Character:MoveTo(Vector3.new(math.random(-100,100),10,math.random(-100,100))) 
+            end
+            task.wait(0.8)
+        end
     end)
 end})
 
 AutoTab:CreateButton({Name="Touch Everything", Callback=function()
     local rt = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    for _, p in ipairs(workspace:GetDescendants()) do if p:IsA("TouchTransmitter") and rt then
-        firetouchinterest(rt, p.Parent, 0); firetouchinterest(rt, p.Parent, 1)
-    end end
+    for _, p in ipairs(workspace:GetDescendants()) do
+        if p:IsA("TouchTransmitter") and rt then
+            firetouchinterest(rt, p.Parent, 0)
+            firetouchinterest(rt, p.Parent, 1)
+        end
+    end
 end})
 
 -- REMOTES
@@ -139,7 +154,8 @@ RemoteTab:CreateButton({Name="Toggle Remote Lagging", Callback=function()
                         else obj:InvokeServer("NebulaSpam") end
                     end)
                 end
-            end; task.wait(0.05)
+            end
+            task.wait(0.05)
         end
     end) end
 end})
@@ -275,133 +291,140 @@ end})
 
 -- FTAP Tab
 FTAPTab:CreateToggle({Name="Enable Fling (FTAP)", CurrentValue=flingEnabled, Callback=function(v) flingEnabled=v end})
+
 FTAPTab:CreateSlider({Name="Fling Strength", Range={100,5000}, Increment=50, CurrentValue=flingStrength, Callback=function(v)
     flingStrength = math.clamp(v, 100, 5000)
     Rayfield:Notify({Title="FTAP", Content="Strength: "..flingStrength, Duration=1})
 end})
 
--- AntiGrab toggle - instantly breaks weld to drop grabs
 FTAPTab:CreateToggle({Name="AntiGrab", CurrentValue=antiGrabEnabled, Callback=function(v)
     antiGrabEnabled = v
 end})
 
--- Spawn Kill All toggle
-FTAPTab:CreateToggle({
-    Name = "Spawn Kill All",
-    CurrentValue = spawnKillAll,
-    Callback = function(value)
-        spawnKillAll = value
-        if spawnKillAll then
-            spawn(function()
-                local water = workspace:FindFirstChild("Water") or workspace:FindFirstChild("KillPart") or workspace:FindFirstChild("KillZone")
-                local waterPos = water and (water.Position + Vector3.new(0, 5, 0)) or Vector3.new(0, 0, 0)
+FTAPTab:CreateToggle({Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback=function(value)
+    spawnKillAll = value
+    if spawnKillAll then
+        spawn(function()
+            local water = workspace:FindFirstChild("Water") or workspace:FindFirstChild("KillPart") or workspace:FindFirstChild("KillZone")
+            if not water then
+                Rayfield:Notify({Title="Spawn Kill All", Content="Water kill zone not found!", Duration=3})
+                spawnKillAll = false
+                return
+            end
+            local waterPos = water.Position + Vector3.new(0, 5, 0)
 
-                while spawnKillAll do
-                    for _, player in pairs(Players:GetPlayers()) do
-                        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                            local hrp = player.Character.HumanoidRootPart
+            while spawnKillAll do
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = player.Character.HumanoidRootPart
 
-                            -- Find available GrabParts in workspace to use
-                            local grabParts = nil
-                            for _, m in pairs(workspace:GetChildren()) do
-                                if m.Name == "GrabParts" and m:FindFirstChild("GrabPart") then
-                                    local gp = m.GrabPart
-                                    if not gp:FindFirstChild("WeldConstraint") then
-                                        grabParts = m
-                                        break
-                                    end
+                        -- Find free GrabParts
+                        local grabParts = nil
+                        for _, m in pairs(workspace:GetChildren()) do
+                            if m.Name == "GrabParts" and m:FindFirstChild("GrabPart") then
+                                local gp = m.GrabPart
+                                if not gp:FindFirstChild("WeldConstraint") then
+                                    grabParts = m
+                                    break
                                 end
-                            end
-
-                            if grabParts then
-                                local grabPart = grabParts.GrabPart
-
-                                -- Teleport grab part slightly above player
-                                grabPart.CFrame = hrp.CFrame * CFrame.new(0, 10, 0)
-                                task.wait(0.1)
-
-                                -- Mobile-compatible grab: fire touch events
-                                pcall(function()
-                                    firetouchinterest(hrp, grabPart, 0)
-                                    firetouchinterest(hrp, grabPart, 1)
-                                end)
-
-                                task.wait(0.3)
-
-                                -- Now teleport player into water kill zone
-                                hrp.CFrame = CFrame.new(waterPos)
-
-                                task.wait(0.3)
-
-                                -- Release grab by destroying weld
-                                if grabPart:FindFirstChild("WeldConstraint") then
-                                    grabPart.WeldConstraint:Destroy()
-                                end
-
-                                task.wait(0.1)
                             end
                         end
+
+                        if grabParts then
+                            local grabPart = grabParts.GrabPart
+
+                            -- Position grab part slightly above player to grab
+                            grabPart.CFrame = hrp.CFrame * CFrame.new(0, 5, 0)
+                            task.wait(0.1)
+
+                            -- Fire touch events to grab (mobile compatible)
+                            pcall(function()
+                                firetouchinterest(hrp, grabPart, 0)
+                                firetouchinterest(hrp, grabPart, 1)
+                            end)
+
+                            task.wait(0.3)
+
+                            -- Teleport player to water kill zone
+                            hrp.CFrame = CFrame.new(waterPos)
+
+                            task.wait(0.3)
+
+                            -- Release grab by destroying weld
+                            if grabPart:FindFirstChild("WeldConstraint") then
+                                grabPart.WeldConstraint:Destroy()
+                            end
+
+                            task.wait(0.1)
+                        end
                     end
-                    task.wait(1)
                 end
-            end)
-        end
+                task.wait(1)
+            end
+        end)
     end
-})
+end})
 
--- Fling All toggle: spin your rig and fling all players by collision
-FTAPTab:CreateToggle({
-    Name = "Fling All",
-    CurrentValue = flingAll,
-    Callback = function(value)
-        flingAll = value
-        if flingAll then
-            spawn(function()
-                local RunService = game:GetService("RunService")
-                local Players = game:GetService("Players")
-                local LocalPlayer = Players.LocalPlayer
-                local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-                local hrp = character:WaitForChild("HumanoidRootPart")
-                local bodyGyro = Instance.new("BodyGyro")
-                bodyGyro.Parent = hrp
-                bodyGyro.MaxTorque = Vector3.new(0, math.huge, 0)
-                bodyGyro.P = 100000
-                local rotationSpeed = 20 -- Adjust as needed
+FTAPTab:CreateToggle({Name="Fling All", CurrentValue=flingAll, Callback=function(value)
+    flingAll = value
+    if flingAll then
+        spawn(function()
+            while flingAll do
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = player.Character.HumanoidRootPart
 
-                local connection
-                connection = RunService.Heartbeat:Connect(function(deltaTime)
-                    if not flingAll or not hrp.Parent then
-                        bodyGyro:Destroy()
-                        if connection then connection:Disconnect() end
-                        return
+                        -- Spin local player's rig fast and move into others to fling
+                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                            local root = LocalPlayer.Character.HumanoidRootPart
+                            -- Spin the local rig fast on Y axis
+                            local spinSpeed = 30
+                            local rot = 0
+                            local spinConnection
+                            spinConnection = RunService.Heartbeat:Connect(function(dt)
+                                if not flingAll then spinConnection:Disconnect() return end
+                                rot = rot + spinSpeed * dt
+                                root.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, math.rad(rot), 0)
+                            end)
+
+                            -- Stay near player to fling by collision
+                            root.CFrame = hrp.CFrame * CFrame.new(0,0,2)
+
+                            task.wait(2)
+
+                            if spinConnection then spinConnection:Disconnect() end
+                        end
                     end
-                    bodyGyro.CFrame = bodyGyro.CFrame * CFrame.Angles(0, math.rad(rotationSpeed), 0)
-                end)
-            end)
-        end
+                end
+                task.wait(0.5)
+            end
+        end)
     end
-})
+end})
 
--- FTAP release detection for fling and Antigrab
+-- FTAP release detection and AntiGrab implementation
 workspace.ChildAdded:Connect(function(m)
     if m.Name == "GrabParts" and m:FindFirstChild("GrabPart") and m.GrabPart:FindFirstChild("WeldConstraint") then
         local part = m.GrabPart.WeldConstraint.Part1
         m:GetPropertyChangedSignal("Parent"):Connect(function()
-            if not m.Parent then
-                if flingEnabled then
+            if not m.Parent and flingEnabled then
+                local last = UserInput:GetLastInputType()
+                if last == Enum.UserInputType.MouseButton1 or last == Enum.UserInputType.Touch then
                     local bv = Instance.new("BodyVelocity")
                     bv.MaxForce = Vector3.new(1e9,1e9,1e9)
                     bv.Velocity = Camera.CFrame.LookVector * flingStrength
                     bv.Parent = part
                     Debris:AddItem(bv, 0.5)
                 end
-
-                if antiGrabEnabled then
-                    if m.GrabPart:FindFirstChild("WeldConstraint") then
-                        m.GrabPart.WeldConstraint:Destroy()
-                    end
-                end
             end
         end)
+        if antiGrabEnabled then
+            task.spawn(function()
+                task.wait(0.1)
+                if m.GrabPart:FindFirstChild("WeldConstraint") then
+                    m.GrabPart.WeldConstraint:Destroy()
+                end
+            end)
+        end
     end
 end)

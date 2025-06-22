@@ -1,5 +1,3 @@
--- Nebula Hub Universal – Full Updated Script (Key System Removed)
-
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 if not Rayfield then return warn("Failed to load Rayfield UI.") end
 
@@ -19,6 +17,7 @@ local InfJump, remLag = false, false
 local espObjects = {}
 local flingEnabled, flingStrength = false, 350
 local shootRemote = nil
+local antiGrabEnabled = false  -- NEW: AntiGrab toggle state
 
 -- MAIN UI
 local Window = Rayfield:CreateWindow({
@@ -266,6 +265,19 @@ FTAPTab:CreateSlider({Name="Fling Strength", Range={100,5000}, Increment=50, Cur
     flingStrength = math.clamp(v, 100, 5000)
     Rayfield:Notify({Title="FTAP", Content="Strength: "..flingStrength, Duration=1})
 end})
+-- NEW: AntiGrab toggle
+FTAPTab:CreateToggle({
+    Name = "AntiGrab",
+    CurrentValue = false,
+    Callback = function(value)
+        antiGrabEnabled = value
+        Rayfield:Notify({
+            Title = "FTAP",
+            Content = "AntiGrab "..(value and "Enabled" or "Disabled"),
+            Duration = 2
+        })
+    end
+})
 
 -- FTAP release detection
 workspace.ChildAdded:Connect(function(m)
@@ -283,5 +295,21 @@ workspace.ChildAdded:Connect(function(m)
                 end
             end
         end)
+    end
+end)
+
+-- NEW: AntiGrab loop to destroy grab welds instantly
+RunService.Heartbeat:Connect(function()
+    if antiGrabEnabled and LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetChildren()) do
+            if part:IsA("BasePart") then
+                for _, constraint in pairs(part:GetChildren()) do
+                    if constraint:IsA("WeldConstraint") or constraint:IsA("Weld") then
+                        -- Destroy all welds on your parts to break grabs instantly
+                        constraint:Destroy()
+                    end
+                end
+            end
+        end
     end
 end)

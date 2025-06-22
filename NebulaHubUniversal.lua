@@ -7,6 +7,7 @@ local UserInput = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 local Camera = workspace.CurrentCamera
+local Workspace = workspace
 local LocalPlayer = Players.LocalPlayer
 
 -- STATE VARIABLES
@@ -18,9 +19,11 @@ local espObjects = {}
 local flingEnabled, flingStrength = false, 350
 local shootRemote = nil
 
-local antiGrab = false
-local spawnKillAll = false
-local flingAll = false
+-- FTAP FEATURE VARIABLES
+local AntiGrabEnabled = false
+local SpawnKillAllEnabled = false
+local FlingAllEnabled = false
+local FlingAllStrength = 5000
 
 -- MAIN UI
 local Window = Rayfield:CreateWindow({
@@ -31,7 +34,7 @@ local Window = Rayfield:CreateWindow({
     ToggleUIKeybind = Enum.KeyCode.K,
     ConfigurationSaving = {Enabled=true, FileName="NebulaHubUniversal"},
     Discord = {Enabled=true, Invite="yTxgQcTUw4", RememberJoins=true},
-    KeySystem = false
+    KeySystem = false -- Disabled key system
 })
 
 -- TABS
@@ -188,11 +191,11 @@ local function getClosestEnemy()
     local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     local bestDist, bestP = AimFOV, nil
     for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild(TargetPart) then
-            if TeamCheck and p.Team == LocalPlayer.Team then continue end
+        if p~=LocalPlayer and p.Character and p.Character:FindFirstChild(TargetPart) then
+            if TeamCheck and p.Team==LocalPlayer.Team then continue end
             local pos, on = Camera:WorldToViewportPoint(p.Character[TargetPart].Position)
             if on then
-                local mag = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                local mag = (Vector2.new(pos.X,pos.Y)-center).Magnitude
                 if mag < bestDist then bestDist, bestP = mag, p end
             end
         end
@@ -216,8 +219,8 @@ RunService.RenderStepped:Connect(function()
     local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
     for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild(TargetPart) then
-            if TeamCheck and p.Team == LocalPlayer.Team then continue end
+        if p~=LocalPlayer and p.Character and p.Character:FindFirstChild(TargetPart) then
+            if TeamCheck and p.Team==LocalPlayer.Team then continue end
             local part = p.Character[TargetPart]
             local pos, on = Camera:WorldToViewportPoint(part.Position)
             local dist = (part.Position - camPos).Magnitude
@@ -226,31 +229,31 @@ RunService.RenderStepped:Connect(function()
             local rp = RaycastParams.new()
             rp.FilterDescendantsInstances = {LocalPlayer.Character}
             rp.FilterType = Enum.RaycastFilterType.Blacklist
-            local hit = workspace:Raycast(camPos, part.Position - camPos, rp)
+            local hit = workspace:Raycast(camPos, part.Position-camPos, rp)
             local vis = hit and hit.Instance:IsDescendantOf(p.Character)
 
             if ESPOn and on and vis then
                 if not espObjects[p] then
-                    espObjects[p] = {box = Drawing.new("Square"), line = Drawing.new("Line")}
+                    espObjects[p] = {box=Drawing.new("Square"), line=Drawing.new("Line")}
                 end
-                local d = espObjects[p]
-                local size = math.clamp(2000 / dist, 20, 200)
-                d.box.Visible = true
-                d.box.Color = Color3.new(1, 0, 0)
-                d.box.Thickness = 2
-                d.box.Size = Vector2.new(size, size)
-                d.box.Position = Vector2.new(pos.X, pos.Y) - d.box.Size / 2
-                d.line.Visible = LineESP
+                local d=espObjects[p]
+                local size=math.clamp(2000/dist,20,200)
+                d.box.Visible=true
+                d.box.Color=Color3.new(1,0,0)
+                d.box.Thickness=2
+                d.box.Size=Vector2.new(size,size)
+                d.box.Position=Vector2.new(pos.X,pos.Y)-d.box.Size/2
+                d.line.Visible=LineESP
                 if LineESP then
-                    d.line.From = center
-                    d.line.To = Vector2.new(pos.X, pos.Y)
-                    d.line.Color = Color3.new(1, 0, 0)
-                    d.line.Thickness = 1
+                    d.line.From=center
+                    d.line.To=Vector2.new(pos.X,pos.Y)
+                    d.line.Color=Color3.new(1,0,0)
+                    d.line.Thickness=1
                 end
             elseif espObjects[p] then
                 espObjects[p].box:Remove()
                 espObjects[p].line:Remove()
-                espObjects[p] = nil
+                espObjects[p]=nil
             end
         end
     end
@@ -267,6 +270,7 @@ RunService.RenderStepped:Connect(function()
                 else
                     findShootRemote()
                 end
+
                 if UserInput.TouchEnabled then
                     for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
                         if gui:IsA("ImageButton") and gui.Name:lower():find("shoot") and gui.Visible then
@@ -281,148 +285,186 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- EXPLOITS
-Exploits:CreateButton({Name = "Click Delete", Callback = function()
-    local m = LocalPlayer:GetMouse()
+Exploits:CreateButton({Name="Click Delete", Callback=function()
+    local m=LocalPlayer:GetMouse()
     m.Button1Down:Connect(function() if m.Target then m.Target:Destroy() end end)
 end})
 
-local noclip = false
-local noclipConn
-Exploits:CreateToggle({Name = "No Clip", CurrentValue = false, Callback = function(v)
-    noclip = v
-    if noclip then
-        noclipConn = RunService.Stepped:Connect(function()
-            if LocalPlayer.Character then
-                for _, part in ipairs(LocalPlayer.Character:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
-                end
+local noclip=false
+Exploits:CreateToggle({Name="No Clip", CurrentValue=false, Callback=function(v)
+    noclip=v
+    RunService.Stepped:Connect(function()
+        if noclip and LocalPlayer.Character then
+            for _, part in ipairs(LocalPlayer.Character:GetChildren()) do
+                if part:IsA("BasePart") then part.CanCollide=false end
             end
-        end)
-    else
-        if noclipConn then noclipConn:Disconnect() noclipConn = nil end
-    end
-end})
-
-Exploits:CreateButton({Name = "Teleport Tool", Callback = function()
-    local tool = Instance.new("Tool")
-    tool.RequiresHandle = false
-    tool.Name = "TP Tool"
-    tool.Parent = LocalPlayer.Backpack
-    tool.Activated:Connect(function()
-        local m = LocalPlayer:GetMouse()
-        if m.Hit then LocalPlayer.Character:MoveTo(m.Hit.p + Vector3.new(0, 3, 0)) end
+        end
     end)
 end})
 
--- FTAP Tab
-
-FTAPTab:CreateToggle({Name = "Enable Fling (FTAP)", CurrentValue = flingEnabled, Callback = function(v)
-    flingEnabled = v
+Exploits:CreateButton({Name="Teleport Tool", Callback=function()
+    local tool=Instance.new("Tool")
+    tool.RequiresHandle=false
+    tool.Name="TP Tool"
+    tool.Parent=LocalPlayer.Backpack
+    tool.Activated:Connect(function()
+        local m = LocalPlayer:GetMouse()
+        if m.Hit then LocalPlayer.Character:MoveTo(m.Hit.p + Vector3.new(0,3,0)) end
+    end)
 end})
 
-FTAPTab:CreateSlider({Name = "Fling Strength", Range = {100, 5000}, Increment = 50, CurrentValue = flingStrength, Callback = function(v)
-    flingStrength = math.clamp(v, 100, 5000)
-    Rayfield:Notify({Title = "FTAP", Content = "Strength: " .. flingStrength, Duration = 1})
-end})
+-- FTAP TAB
 
-FTAPTab:CreateToggle({Name = "Anti Grab", CurrentValue = antiGrab, Callback = function(v)
-    antiGrab = v
-end})
-
-FTAPTab:CreateToggle({Name = "Spawn Kill All", CurrentValue = spawnKillAll, Callback = function(v)
-    spawnKillAll = v
-    if spawnKillAll then
-        spawn(function()
-            while spawnKillAll do
-                for _, player in ipairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        -- Use grab mechanic to teleport 5000 studs away and release
-                        local hrp = player.Character.HumanoidRootPart
-                        local grabParts = workspace:FindFirstChild("GrabParts")
-                        if grabParts and grabParts:FindFirstChild("GrabPart") and grabParts.GrabPart:FindFirstChild("WeldConstraint") then
-                            local weld = grabParts.GrabPart.WeldConstraint
-                            weld.Part1 = hrp
-                            grabParts.Parent = workspace
-                            grabParts.GrabPart.Parent = grabParts
-                            grabParts.Parent = nil -- release by setting parent to nil
-                        else
-                            -- fallback teleport if grab mechanic unavailable
-                            hrp.CFrame = hrp.CFrame + Vector3.new(0, 0, 5000)
-                        end
-                    end
-                end
-                task.wait(1)
-            end
-        end)
+-- Enable Fling Toggle
+FTAPTab:CreateToggle({
+    Name="Enable Fling (FTAP)",
+    CurrentValue=flingEnabled,
+    Callback=function(v)
+        flingEnabled=v
     end
-end})
+})
 
-FTAPTab:CreateToggle({Name = "Fling All", CurrentValue = flingAll, Callback = function(v)
-    flingAll = v
-    if flingAll then
-        spawn(function()
-            while flingAll do
-                for _, player in ipairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        local hrp = player.Character.HumanoidRootPart
-                        local localHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                        if localHrp then
-                            -- teleport to player
-                            LocalPlayer.Character:MoveTo(hrp.Position)
-                            task.wait(0.1)
-                            -- grab player using grab mechanic
-                            local grabParts = workspace:FindFirstChild("GrabParts")
-                            if grabParts and grabParts:FindFirstChild("GrabPart") and grabParts.GrabPart:FindFirstChild("WeldConstraint") then
-                                local weld = grabParts.GrabPart.WeldConstraint
-                                weld.Part1 = hrp
-                                grabParts.Parent = workspace
-                                grabParts.GrabPart.Parent = grabParts
-                                -- fling with high strength
-                                local bv = Instance.new("BodyVelocity")
-                                bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-                                bv.Velocity = (Camera.CFrame.LookVector * 5000)
-                                bv.Parent = hrp
-                                Debris:AddItem(bv, 0.5)
-                                task.wait(0.5)
-                                -- release
-                                grabParts.Parent = nil
-                            end
-                        end
-                        task.wait(0.5)
-                    end
-                end
-                task.wait(1)
-            end
-        end)
+-- Fling Strength Slider
+FTAPTab:CreateSlider({
+    Name="Fling Strength",
+    Range={100,5000},
+    Increment=50,
+    CurrentValue=flingStrength,
+    Callback=function(v)
+        flingStrength = math.clamp(v, 100, 5000)
+        Rayfield:Notify({Title="FTAP", Content="Strength: "..flingStrength, Duration=1})
     end
-end})
+})
 
--- FTAP release detection and AntiGrab implementation
-workspace.ChildAdded:Connect(function(m)
+-- AntiGrab Toggle
+FTAPTab:CreateToggle({
+    Name="AntiGrab",
+    CurrentValue=AntiGrabEnabled,
+    Callback=function(v)
+        AntiGrabEnabled = v
+        Rayfield:Notify({Title="AntiGrab", Content=(v and "Enabled" or "Disabled"), Duration=2})
+    end
+})
+
+-- Spawn Kill All Toggle
+FTAPTab:CreateToggle({
+    Name="Spawn Kill All",
+    CurrentValue=SpawnKillAllEnabled,
+    Callback=function(v)
+        SpawnKillAllEnabled = v
+        Rayfield:Notify({Title="Spawn Kill All", Content=(v and "Enabled" or "Disabled"), Duration=2})
+    end
+})
+
+-- Fling All Toggle
+FTAPTab:CreateToggle({
+    Name="Fling All",
+    CurrentValue=FlingAllEnabled,
+    Callback=function(v)
+        FlingAllEnabled = v
+        Rayfield:Notify({Title="Fling All", Content=(v and "Enabled" or "Disabled"), Duration=2})
+    end
+})
+
+-- FTAP release detection for fling on release
+Workspace.ChildAdded:Connect(function(m)
     if m.Name == "GrabParts" and m:FindFirstChild("GrabPart") and m.GrabPart:FindFirstChild("WeldConstraint") then
         local weld = m.GrabPart.WeldConstraint
         local part = weld.Part1
         m:GetPropertyChangedSignal("Parent"):Connect(function()
-            if not m.Parent then
-                if flingEnabled then
-                    local last = UserInput:GetLastInputType()
-                    if last == Enum.UserInputType.MouseButton1 or last == Enum.UserInputType.Touch then
-                        local bv = Instance.new("BodyVelocity")
-                        bv.MaxForce = Vector3.new(1e9,1e9,1e9)
-                        bv.Velocity = Camera.CFrame.LookVector * flingStrength
-                        bv.Parent = part
-                        Debris:AddItem(bv, 0.5)
-                    end
+            if not m.Parent and flingEnabled then
+                local last = UserInput:GetLastInputType()
+                if last == Enum.UserInputType.MouseButton1 or last == Enum.UserInputType.Touch then
+                    local bv = Instance.new("BodyVelocity")
+                    bv.MaxForce = Vector3.new(1e9,1e9,1e9)
+                    bv.Velocity = Camera.CFrame.LookVector * flingStrength
+                    bv.Parent = part
+                    Debris:AddItem(bv, 0.5)
                 end
             end
         end)
-
-        -- AntiGrab: Instantly drop when grabbed
-        if antiGrab then
-            -- forcibly remove weld constraint to drop
-            weld:Destroy()
-        end
     end
 end)
+
+-- AntiGrab implementation: instantly drop weld on grab
+Workspace.ChildAdded:Connect(function(m)
+    if AntiGrabEnabled and m.Name == "GrabParts" and m:FindFirstChild("GrabPart") and m.GrabPart:FindFirstChild("WeldConstraint") then
+        local weld = m.GrabPart.WeldConstraint
+        weld:Destroy()
+    end
+end)
+
+-- Spawn Kill All loop
+coroutine.wrap(function()
+    while true do
+        if SpawnKillAllEnabled then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    -- Teleport them 5000 studs below the map, so they can't come back quickly
+                    player.Character.HumanoidRootPart.CFrame = CFrame.new(0, -5000, 0)
+                end
+            end
+            task.wait(2) -- repeat every 2 seconds to keep them down
+        else
+            task.wait(1)
+        end
+    end
+end)()
+
+-- Helper functions for Fling All
+
+local function getGrabWeld()
+    local grabParts = Workspace:FindFirstChild("GrabParts")
+    if not grabParts then return nil end
+    local grabPart = grabParts:FindFirstChild("GrabPart")
+    if not grabPart then return nil end
+    local weld = grabPart:FindFirstChild("WeldConstraint")
+    return weld, grabPart
+end
+
+local function grabTarget(weld, target)
+    local hrp = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        weld.Part1 = hrp
+        return true
+    end
+    return false
+end
+
+-- Fling All coroutine
+coroutine.wrap(function()
+    while true do
+        if FlingAllEnabled then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        -- Teleport near the player
+                        hrp.CFrame = player.Character.HumanoidRootPart.CFrame
+                    end
+                    task.wait(0.25) -- Wait for grab parts to spawn
+
+                    local weld, grabPart = getGrabWeld()
+                    if weld and grabPart then
+                        -- Attach grab weld to target
+                        if grabTarget(weld, player) then
+                            -- Check if input is mouse or touch
+                            local lastInput = UserInput:GetLastInputType()
+                            if lastInput == Enum.UserInputType.MouseButton1 or lastInput == Enum.UserInputType.Touch then
+                                -- Apply fling velocity
+                                local bv = Instance.new("BodyVelocity")
+                                bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+                                bv.Velocity = Camera.CFrame.LookVector * FlingAllStrength
+                                bv.Parent = grabPart
+                                Debris:AddItem(bv, 0.5)
+                            end
+                        end
+                    end
+                    task.wait(0.5) -- Delay before next player
+                end
+            end
+        else
+            task.wait(1)
+        end
+    end
+end)()

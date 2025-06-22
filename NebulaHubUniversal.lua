@@ -301,24 +301,39 @@ FTAPTab:CreateToggle({Name="AntiGrab", CurrentValue=antiGrabEnabled, Callback=fu
     antiGrabEnabled = v
 end})
 
+-- SPAWN KILL ALL REVISED
 FTAPTab:CreateToggle({Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback=function(value)
     spawnKillAll = value
     if spawnKillAll then
         spawn(function()
+            -- Try to find the blue water kill zone by name or color
             local water = workspace:FindFirstChild("Water") or workspace:FindFirstChild("KillPart") or workspace:FindFirstChild("KillZone")
+            
+            -- If no kill zone found, notify and stop
+            if not water then
+                -- Try to find water by looking for a large blue BasePart
+                for _, part in pairs(workspace:GetDescendants()) do
+                    if part:IsA("BasePart") and part.Size.Magnitude > 20 and part.BrickColor == BrickColor.new("Bright blue") then
+                        water = part
+                        break
+                    end
+                end
+            end
+            
             if not water then
                 Rayfield:Notify({Title="Spawn Kill All", Content="Water kill zone not found!", Duration=3})
                 spawnKillAll = false
                 return
             end
-            local waterPos = water.Position + Vector3.new(0, 5, 0)
-
+            
+            local waterPos = water.Position + Vector3.new(0, 5, 0) -- above water
+            
             while spawnKillAll do
                 for _, player in pairs(Players:GetPlayers()) do
                     if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                         local hrp = player.Character.HumanoidRootPart
 
-                        -- Find free GrabParts
+                        -- GrabPart system (adjust names if your game differs)
                         local grabParts = nil
                         for _, m in pairs(workspace:GetChildren()) do
                             if m.Name == "GrabParts" and m:FindFirstChild("GrabPart") then
@@ -333,11 +348,11 @@ FTAPTab:CreateToggle({Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback
                         if grabParts then
                             local grabPart = grabParts.GrabPart
 
-                            -- Position grab part slightly above player to grab
+                            -- Position grab part above player to grab
                             grabPart.CFrame = hrp.CFrame * CFrame.new(0, 5, 0)
                             task.wait(0.1)
 
-                            -- Fire touch events to grab (mobile compatible)
+                            -- Fire touch events to grab player (works on mobile too)
                             pcall(function()
                                 firetouchinterest(hrp, grabPart, 0)
                                 firetouchinterest(hrp, grabPart, 1)
@@ -345,12 +360,12 @@ FTAPTab:CreateToggle({Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback
 
                             task.wait(0.3)
 
-                            -- Teleport player to water kill zone
+                            -- Teleport the grabbed player to water kill zone
                             hrp.CFrame = CFrame.new(waterPos)
 
                             task.wait(0.3)
 
-                            -- Release grab by destroying weld
+                            -- Release grab by destroying WeldConstraint
                             if grabPart:FindFirstChild("WeldConstraint") then
                                 grabPart.WeldConstraint:Destroy()
                             end
@@ -377,7 +392,6 @@ FTAPTab:CreateToggle({Name="Fling All", CurrentValue=flingAll, Callback=function
                         -- Spin local player's rig fast and move into others to fling
                         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                             local root = LocalPlayer.Character.HumanoidRootPart
-                            -- Spin the local rig fast on Y axis
                             local spinSpeed = 30
                             local rot = 0
                             local spinConnection
@@ -387,9 +401,7 @@ FTAPTab:CreateToggle({Name="Fling All", CurrentValue=flingAll, Callback=function
                                 root.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, math.rad(rot), 0)
                             end)
 
-                            -- Stay near player to fling by collision
                             root.CFrame = hrp.CFrame * CFrame.new(0,0,2)
-
                             task.wait(2)
 
                             if spinConnection then spinConnection:Disconnect() end

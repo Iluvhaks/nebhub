@@ -1,5 +1,3 @@
--- Nebula Hub Universal Full Script with TSB Autofarm, FTAP, and Delete Player on Grab Release
-
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 if not Rayfield then return warn("Failed to load Rayfield UI.") end
 
@@ -23,6 +21,7 @@ local shootRemote = nil
 local antiGrabEnabled = false
 local spawnKillAll = false
 local flingAll = false
+local deletePlayerOnRelease = false
 
 -- AUTOFARM TSB VARIABLES
 local autofarmEnabled = false
@@ -308,11 +307,7 @@ end})
 
 FTAPTab:CreateToggle({Name="AntiGrab", CurrentValue=antiGrabEnabled, Callback=function(v)
     antiGrabEnabled = v
-    if antiGrabEnabled then
-        Rayfield:Notify({Title="AntiGrab", Content="Enabled", Duration=2})
-    else
-        Rayfield:Notify({Title="AntiGrab", Content="Disabled", Duration=2})
-    end
+    Rayfield:Notify({Title="AntiGrab", Content=antiGrabEnabled and "Enabled" or "Disabled", Duration=2})
 end})
 
 FTAPTab:CreateToggle({Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback=function(value)
@@ -370,8 +365,17 @@ FTAPTab:CreateToggle({Name="Fling All", CurrentValue=flingAll, Callback=function
     end
 end})
 
--- FTAP release detection, AntiGrab and Delete Player on Grab Release
+-- New toggle: Delete Player on Grab Release
+FTAPTab:CreateToggle({
+    Name = "Delete Player on Grab Release",
+    CurrentValue = false,
+    Callback = function(value)
+        deletePlayerOnRelease = value
+        Rayfield:Notify({Title="Delete Player", Content=deletePlayerOnRelease and "Enabled" or "Disabled", Duration=2})
+    end
+})
 
+-- FTAP release detection and AntiGrab implementation with Delete Player
 workspace.ChildAdded:Connect(function(m)
     if m.Name == "GrabParts" and m:FindFirstChild("GrabPart") then
         local grabPart = m.GrabPart
@@ -381,90 +385,72 @@ workspace.ChildAdded:Connect(function(m)
             weld:Destroy()
         end
 
-        -- On Weld removal (grab release)
-        local function onWeldRemoved()
-            -- Delay a bit to detect if the grabPart is still there
-            task.wait(0.1)
-
-            if not grabPart:FindFirstChild("WeldConstraint") then
-                if flingEnabled then
-                    local part = grabPart
-                    if part then
-                        local bv = Instance.new("BodyVelocity")
-                        bv.MaxForce = Vector3.new(1e9,1e9,1e9)
-                        bv.Velocity = Camera.CFrame.LookVector * flingStrength
-                        bv.Parent = part
-                        Debris:AddItem(bv, 0.3)
+        -- Listen for grab release
+        m:GetPropertyChangedSignal("Parent"):Connect(function()
+            if not m.Parent then
+                local part = weld and weld.Part1
+                if part and deletePlayerOnRelease then
+                    local character = part:FindFirstAncestorOfClass("Model")
+                    if character and character:FindFirstChild("HumanoidRootPart") then
+                        -- Teleport player 25,000 studs away
+                        character.HumanoidRootPart.CFrame = CFrame.new(25000, 25000, 25000)
                     end
-                end
-
-                -- DELETE PLAYER ON RELEASE: teleport grabbed player's character far away (25000 studs)
-                local grabbedPlayer
-                for _, player in pairs(Players:GetPlayers()) do
-                    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart == grabPart then
-                        grabbedPlayer = player
-                        break
-                    end
-                end
-
-                if grabbedPlayer and grabbedPlayer.Character and grabbedPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    grabbedPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(25000, 25000, 25000)
-                    Rayfield:Notify({Title="FTAP", Content="Deleted player "..grabbedPlayer.Name.." on grab release.", Duration=3})
+                elseif part and flingEnabled then
+                    -- Existing fling code
+                    local bv = Instance.new("BodyVelocity")
+                    bv.MaxForce = Vector3.new(1e9,1e9,1e9)
+                    bv.Velocity = Camera.CFrame.LookVector * flingStrength
+                    bv.Parent = part
+                    Debris:AddItem(bv, 0.3)
                 end
             end
-        end
-
-        if weld then
-            weld.Destroying:Connect(onWeldRemoved)
-        end
+        end)
     end
 end)
 
--- TSB Tab Autofarm Example (Basic)
+-- TSB TAB: Autofarm
+
+local function findAttackRemotes()
+    local remotes = {}
+    for _, obj in pairs(ReplicatedStorage:GetDescendants()) do
+        if obj:IsA("RemoteEvent") and obj.Name:lower():find("attack") then
+            table.insert(remotes, obj)
+        end
+    end
+    return remotes
+end
+
 TSBTab:CreateToggle({
-    Name = "TSB Autofarm",
+    Name = "Auto Farm",
     CurrentValue = false,
-    Callback = function(v)
-        autofarmEnabled = v
+    Callback = function(value)
+        autofarmEnabled = value
         if autofarmEnabled then
-            Rayfield:Notify({Title="TSB Autofarm", Content="Enabled", Duration=2})
             spawn(function()
                 while autofarmEnabled do
-                    -- Find nearest enemy and attack
-                    local nearest = nil
-                    local nearestDist = math.huge
-                    for _, p in pairs(Players:GetPlayers()) do
-                        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                            local dist = (LocalPlayer.Character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
-                            if dist < nearestDist then
-                                nearestDist = dist
-                                nearest = p
+                    local closestPlayer, closestDist = nil, math.huge
+                    for _, player in pairs(Players:GetPlayers()) do
+                        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChildOfClass("Humanoid") then
+                            local dist = (player.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                            if dist < closestDist then
+                                closestDist = dist
+                                closestPlayer = player
                             end
                         end
                     end
-                    if nearest and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                        -- Teleport close and attack (example)
-                        LocalPlayer.Character.HumanoidRootPart.CFrame = nearest.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
-                        -- Simulate attack here with remote or tool (user can customize)
+                    if closestPlayer then
+                        local remotes = findAttackRemotes()
+                        for _, remote in pairs(remotes) do
+                            pcall(function()
+                                remote:FireServer(closestPlayer.Character)
+                            end)
+                        end
                     end
                     task.wait(1)
                 end
             end)
-        else
-            Rayfield:Notify({Title="TSB Autofarm", Content="Disabled", Duration=2})
         end
     end
 })
 
--- Clean up esp when player leaves
-Players.PlayerRemoving:Connect(function(p)
-    if espObjects[p] then
-        espObjects[p].box:Remove()
-        espObjects[p].line:Remove()
-        espObjects[p] = nil
-    end
-end)
-
-Rayfield:Notify({Title="Nebula Hub", Content="Loaded successfully!", Duration=3})
-
--- End of Script
+-- END OF SCRIPT

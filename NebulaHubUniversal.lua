@@ -31,7 +31,7 @@ local targetPlayer = nil
 local lowHealthFlyEnabled = false
 local flyBV = nil
 
--- TRACK GRABBED PARTS FOR FLING ON RELEASE
+-- Table to store grabbed parts for fling on release
 local grabbedParts = {}
 
 -- MAIN UI
@@ -87,7 +87,6 @@ local function toggleFly(state)
         flyBV.Parent = hrp
         _G.Fly = true
 
-        -- Update velocity each heartbeat based on camera direction
         flyBV:GetPropertyChangedSignal("Parent"):Connect(function()
             if not flyBV.Parent then
                 _G.Fly = false
@@ -332,7 +331,9 @@ Exploits:CreateButton({Name="Teleport Tool", Callback=function()
 end})
 
 -- === FTAP Tab ===
-FTAPTab:CreateToggle({Name="Enable Fling (FTAP)", CurrentValue=flingEnabled, Callback=function(v) flingEnabled=v end})
+FTAPTab:CreateToggle({Name="Enable Fling (FTAP)", CurrentValue=flingEnabled, Callback=function(v)
+    flingEnabled=v
+end})
 
 FTAPTab:CreateSlider({Name="Fling Strength", Range={100,5000}, Increment=50, CurrentValue=flingStrength, Callback=function(v)
     flingStrength = math.clamp(v, 100, 5000)
@@ -403,25 +404,46 @@ FTAPTab:CreateToggle({Name="Fling All", CurrentValue=flingAll, Callback=function
     end
 end})
 
--- TRACK GrabParts children when added
+-- FTAP release detection and AntiGrab implementation
 workspace.ChildAdded:Connect(function(m)
     if m.Name == "GrabParts" then
+        -- Clear grabbedParts list
         grabbedParts = {}
+
+        -- Store parts grabbed that are NOT your character parts
         for _, part in pairs(m:GetChildren()) do
-            table.insert(grabbedParts, part)
+            if part:IsA("BasePart") then
+                local isYours = false
+                if LocalPlayer.Character then
+                    for _, cPart in pairs(LocalPlayer.Character:GetChildren()) do
+                        if cPart == part then
+                            isYours = true
+                            break
+                        end
+                    end
+                end
+                if not isYours then
+                    table.insert(grabbedParts, part)
+                end
+            end
         end
 
-        -- AntiGrab Weld destroyer
+        -- AntiGrab: Destroy WeldConstraints if enabled
         if antiGrabEnabled then
-            local weld = m:FindFirstChild("GrabPart") and m.GrabPart:FindFirstChild("WeldConstraint")
-            if weld then weld:Destroy() end
+            for _, p in pairs(m:GetChildren()) do
+                for _, weld in pairs(p:GetChildren()) do
+                    if weld:IsA("WeldConstraint") or weld:IsA("Weld") or weld:IsA("Motor6D") then
+                        weld:Destroy()
+                    end
+                end
+            end
         end
     end
 end)
 
--- On GrabParts removal, fling grabbed parts if enabled
 workspace.ChildRemoved:Connect(function(m)
-    if m.Name == "GrabParts" and flingEnabled then
+    if m.Name == "GrabParts" then
+        -- Fling only grabbed parts
         for _, part in pairs(grabbedParts) do
             if part and part.Parent then
                 local bv = Instance.new("BodyVelocity")
@@ -441,32 +463,23 @@ TSBTab:CreateToggle({Name="AutoFarm TSB", CurrentValue=false, Callback=function(
     if autofarmEnabled then
         spawn(function()
             while autofarmEnabled do
-                -- Find player with lowest health (excluding LocalPlayer)
-                local lowestHp = math.huge
-                local target = nil
+                -- Find the first player besides local
                 for _, p in pairs(Players:GetPlayers()) do
-                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChildOfClass("Humanoid") then
-                        local hp = p.Character:FindFirstChildOfClass("Humanoid").Health
-                        if hp < lowestHp then
-                            lowestHp = hp
-                            target = p
-                        end
+                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        targetPlayer = p
+                        break
                     end
                 end
-
-                if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
                     local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                    if root then
-                        LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 3, 2)
+                    local targetRoot = targetPlayer.Character.HumanoidRootPart
+                    if root and targetRoot then
+                        root.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 3)
                     end
                 end
-
-                task.wait(0.7)
+                task.wait(0.5)
             end
         end)
-        Rayfield:Notify({Title="AutoFarm TSB", Content="Enabled", Duration=2})
-    else
-        Rayfield:Notify({Title="AutoFarm TSB", Content="Disabled", Duration=2})
     end
 end})
 

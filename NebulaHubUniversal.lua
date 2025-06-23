@@ -23,80 +23,13 @@ local antiGrabEnabled = false
 local spawnKillAll = false
 local flingAll = false
 
--- AUTOFARM TSB VARIABLES
 local autofarmEnabled = false
 local targetPlayer = nil
 
--- FLY STATE FOR LOW HEALTH SAFE ZONE
 local lowHealthFlyEnabled = false
 local flyBV = nil
 
--- Grab parts tracking for fling-on-release
 local grabbedParts = {}
-local currentGrabParts = nil
-
--- Clear grabbed parts helper
-local function clearGrabbedParts()
-    grabbedParts = {}
-end
-
--- Update grabbed parts list from GrabParts folder
-local function updateGrabbedParts(grabFolder)
-    clearGrabbedParts()
-    if not grabFolder then return end
-
-    for _, part in pairs(grabFolder:GetChildren()) do
-        if part:IsA("BasePart") then
-            local isYours = false
-            if LocalPlayer.Character then
-                for _, cPart in pairs(LocalPlayer.Character:GetChildren()) do
-                    if cPart == part then
-                        isYours = true
-                        break
-                    end
-                end
-            end
-            if not isYours then
-                table.insert(grabbedParts, part)
-            end
-        end
-    end
-end
-
--- When GrabParts folder is added
-workspace.ChildAdded:Connect(function(child)
-    if child.Name == "GrabParts" then
-        currentGrabParts = child
-        updateGrabbedParts(child)
-
-        child.ChildAdded:Connect(function()
-            updateGrabbedParts(child)
-        end)
-        child.ChildRemoved:Connect(function()
-            updateGrabbedParts(child)
-        end)
-    end
-end)
-
--- When GrabParts folder is removed (grab released)
-workspace.ChildRemoved:Connect(function(child)
-    if child == currentGrabParts then
-        currentGrabParts = nil
-
-        -- Fling all grabbed parts on release
-        for _, part in pairs(grabbedParts) do
-            if part and part.Parent then
-                local bv = Instance.new("BodyVelocity")
-                bv.Velocity = part.CFrame.LookVector * flingStrength + Vector3.new(0, flingStrength * 0.5, 0)
-                bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-                bv.Parent = part
-                Debris:AddItem(bv, 0.5)
-            end
-        end
-
-        clearGrabbedParts()
-    end
-end)
 
 -- MAIN UI
 local Window = Rayfield:CreateWindow({
@@ -151,9 +84,7 @@ local function toggleFly(state)
         _G.Fly = true
 
         flyBV:GetPropertyChangedSignal("Parent"):Connect(function()
-            if not flyBV.Parent then
-                _G.Fly = false
-            end
+            if not flyBV.Parent then _G.Fly = false end
         end)
 
         RunService.Heartbeat:Connect(function()
@@ -166,7 +97,7 @@ local function toggleFly(state)
             end
         end)
     else
-        if flyBV then flyBV:Destroy() flyBV = nil end
+        if flyBV then flyBV:Destroy() flyBV=nil end
         _G.Fly = false
     end
 end
@@ -394,83 +325,147 @@ Exploits:CreateButton({Name="Teleport Tool", Callback=function()
 end})
 
 -- === FTAP Tab ===
-FTAPTab:CreateToggle({Name="Enable Fling (FTAP)", CurrentValue=flingEnabled, Callback=function(v) flingEnabled=v end})
-
-FTAPTab:CreateSlider({Name="Fling Strength", Range={100,5000}, Increment=50, CurrentValue=flingStrength, Callback=function(v)
-    flingStrength = math.clamp(v, 100, 5000)
-    Rayfield:Notify({Title="FTAP", Content="Strength: "..flingStrength, Duration=1})
-end})
-
-FTAPTab:CreateToggle({Name="AntiGrab", CurrentValue=antiGrabEnabled, Callback=function(v)
-    antiGrabEnabled = v
-    if antiGrabEnabled then
-        Rayfield:Notify({Title="AntiGrab", Content="Enabled", Duration=2})
-    else
-        Rayfield:Notify({Title="AntiGrab", Content="Disabled", Duration=2})
+FTAPTab:CreateToggle({
+    Name="Enable Fling (On Release)",
+    CurrentValue=flingEnabled,
+    Callback=function(v)
+        flingEnabled = v
+        Rayfield:Notify({Title="FTAP", Content=flingEnabled and "Enabled" or "Disabled", Duration=2})
     end
-end})
+})
 
-FTAPTab:CreateToggle({Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback=function(value)
-    spawnKillAll = value
-    if spawnKillAll then
-        spawn(function()
-            local voidPos = Vector3.new(0, -500, 0)
-            while spawnKillAll do
-                for _, player in pairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        player.Character.HumanoidRootPart.CFrame = CFrame.new(voidPos)
-                    end
-                end
-                task.wait(1)
+FTAPTab:CreateSlider({
+    Name="Fling Strength",
+    Range={100,5000},
+    Increment=50,
+    CurrentValue=flingStrength,
+    Callback=function(v)
+        flingStrength = math.clamp(v, 100, 5000)
+        Rayfield:Notify({Title="FTAP", Content="Strength: "..flingStrength, Duration=1})
+    end
+})
+
+-- FLING ON RELEASE HANDLER
+workspace.ChildAdded:Connect(function(child)
+    if child.Name == "GrabParts" and child:FindFirstChild("GrabPart") then
+        grabbedParts = {}
+
+        for _, grabPart in ipairs(child:GetChildren()) do
+            if grabPart:IsA("BasePart") and not grabPart:IsDescendantOf(LocalPlayer.Character) then
+                table.insert(grabbedParts, grabPart)
             end
-        end)
-        Rayfield:Notify({Title="Spawn Kill All", Content="Enabled", Duration=2})
-    else
-        Rayfield:Notify({Title="Spawn Kill All", Content="Disabled", Duration=2})
-    end
-end})
+        end
 
-FTAPTab:CreateToggle({Name="Fling All", CurrentValue=flingAll, Callback=function(value)
-    flingAll = value
-    if flingAll then
-        spawn(function()
-            while flingAll do
-                for _, player in pairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        local hrp = player.Character.HumanoidRootPart
+        local conn
+        conn = child:GetPropertyChangedSignal("Parent"):Connect(function()
+            if not child.Parent and flingEnabled then
+                for _, part in ipairs(grabbedParts) do
+                    if part and part:IsA("BasePart") then
                         local bv = Instance.new("BodyVelocity")
-                        bv.Velocity = hrp.CFrame.LookVector * flingStrength + Vector3.new(0, flingStrength * 0.5, 0)
+                        bv.Velocity = part.CFrame.LookVector * flingStrength + Vector3.new(0, flingStrength * 0.5, 0)
                         bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-                        bv.Parent = hrp
+                        bv.Parent = part
                         Debris:AddItem(bv, 0.5)
                     end
                 end
-                task.wait(1)
+                grabbedParts = {}
+                if conn then conn:Disconnect() end
             end
         end)
-        Rayfield:Notify({Title="Fling All", Content="Enabled", Duration=2})
-    else
-        Rayfield:Notify({Title="Fling All", Content="Disabled", Duration=2})
     end
-end})
+end)
 
--- === TSB Tab ===
-TSBTab:CreateToggle({Name="Auto Farm TSB", CurrentValue=false, Callback=function(v)
-    autofarmEnabled = v
-    if autofarmEnabled then
-        Rayfield:Notify({Title="AutoFarm TSB", Content="Enabled", Duration=2})
-        spawn(function()
-            while autofarmEnabled do
-                -- Your autofarm logic here
-                task.wait(0.5)
-            end
-        end)
-    else
-        Rayfield:Notify({Title="AutoFarm TSB", Content="Disabled", Duration=2})
+-- === TSB Autofarm (Fully Integrated) ===
+local TSBRemoteAttackEvents = {
+    "Ability1",
+    "Ability2",
+    "Ability3",
+    "Ability4",
+    "Attack"
+}
+
+local tsbRemotes = {}
+for _, name in ipairs(TSBRemoteAttackEvents) do
+    for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+        if obj:IsA("RemoteEvent") and obj.Name == name then
+            tsbRemotes[name] = obj
+        end
     end
-end})
+end
 
--- Additional features and toggles can be added similarly
+for _, name in ipairs(TSBRemoteAttackEvents) do
+    if not tsbRemotes[name] then
+        tsbRemotes[name] = {
+            FireServer = function() end
+        }
+    end
+end
 
-Rayfield:Notify({Title="Nebula Hub Universal", Content="Loaded successfully!", Duration=3})
+local function tweenToTargetCycle(targetChar)
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp or not targetChar then return end
+    local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
+    if not targetHRP then return end
 
+    local behindOffset = -targetHRP.CFrame.LookVector * 5 + Vector3.new(0, 2, 0)
+    local tweenInfo = TweenInfo.new(1.2, Enum.EasingStyle.Linear)
+
+    local targetPos = targetHRP.CFrame.Position + behindOffset
+    local tweenGoal = {CFrame = CFrame.new(targetPos, targetHRP.CFrame.Position)}
+
+    local tween = TweenService:Create(hrp, tweenInfo, tweenGoal)
+    tween:Play()
+    tween.Completed:Wait()
+end
+
+local function autoAttackTSB(target)
+    if not target or not target.Character or not LocalPlayer.Character then return end
+    local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+    local localHRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not targetHRP or not localHRP then return end
+
+    local facePos = targetHRP.CFrame.Position - targetHRP.CFrame.LookVector * 4 + Vector3.new(0,2,0)
+    localHRP.CFrame = CFrame.new(localHRP.Position, facePos)
+
+    for _, move in ipairs({"Ability1","Ability2","Ability3","Ability4","Attack"}) do
+        local remote = tsbRemotes[move]
+        if remote and remote.FireServer then
+            pcall(function() remote:FireServer() end)
+            task.wait(0.1)
+        end
+    end
+end
+
+TSBTab:CreateToggle({
+    Name = "Auto Farm Enabled",
+    CurrentValue = false,
+    Callback = function(v)
+        autofarmEnabled = v
+        Rayfield:Notify({Title="TSB", Content="Auto Farm "..(v and "Enabled" or "Disabled"), Duration=2})
+        if v then
+            spawn(function()
+                while autofarmEnabled do
+                    local closestDist = math.huge
+                    local closestTarget = nil
+                    for _, p in ipairs(Players:GetPlayers()) do
+                        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                            local dist = (LocalPlayer.Character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                            if dist < closestDist then
+                                closestDist = dist
+                                closestTarget = p
+                            end
+                        end
+                    end
+
+                    if closestTarget then
+                        tweenToTargetCycle(closestTarget.Character)
+                        autoAttackTSB(closestTarget)
+                    end
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end
+})
+
+Rayfield:Notify({Title = "Nebula Hub Universal", Content = "Loaded Successfully!", Duration = 3})

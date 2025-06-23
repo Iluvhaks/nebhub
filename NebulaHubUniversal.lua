@@ -1,5 +1,5 @@
 -- Nebula Hub Universal Full Script
--- All Tabs + FTAP Strength & Delete Fling + Fixed TSB Autofarm
+-- All Tabs + FTAP Strength & Auto-Delete Fling + Fixed TSB Autofarm
 
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 if not Rayfield then return warn("Failed to load Rayfield UI.") end
@@ -33,9 +33,7 @@ local function sendVirtualInput(key)
         if typeof(key) == "string" then
             UserInputService:SetKeyDown(Enum.KeyCode[key]); task.wait(0.1); UserInputService:SetKeyUp(Enum.KeyCode[key])
         elseif key == Enum.UserInputType.MouseButton1 then
-            UserInputService:SetMouseButtonPressed(Enum.UserInputType.MouseButton1)
-            task.wait(0.1)
-            UserInputService:SetMouseButtonReleased(Enum.UserInputType.MouseButton1)
+            UserInputService:SetMouseButtonPressed(Enum.UserInputType.MouseButton1); task.wait(0.1); UserInputService:SetMouseButtonReleased(Enum.UserInputType.MouseButton1)
         end
     end
 end
@@ -190,16 +188,13 @@ RunService.RenderStepped:Connect(function()
                 d.box.Visible=true; d.box.Color=Color3.new(1,0,0); d.box.Thickness=2
                 d.box.Size=Vector2.new(size,size); d.box.Position=Vector2.new(pos.X,pos.Y)-d.box.Size/2
                 d.line.Visible=LineESP
-                if LineESP then d.line.From=center; d.line.To=Vector2.new(pos.X,pos.Y)
-                    d.line.Color=Color3.new(1,0,0); d.line.Thickness=1 end
+                if LineESP then d.line.From=center; d.line.To=Vector2.new(pos.X,pos.Y); d.line.Color=Color3.new(1,0,0); d.line.Thickness=1 end
             elseif espObjects[p] then
                 espObjects[p].box:Remove(); espObjects[p].line:Remove(); espObjects[p]=nil
             end
             if AimbotOn and vis then
                 Camera.CFrame = CFrame.new(camPos, part.Position)
-                if AutoShoot then
-                    sendVirtualInput(Enum.UserInputType.MouseButton1)
-                end
+                if AutoShoot then sendVirtualInput(Enum.UserInputType.MouseButton1) end
             end
         end
     end
@@ -223,32 +218,37 @@ FTAPTab:CreateToggle({ Name="Spawn Kill All", CurrentValue=spawnKillAll, Callbac
 FTAPTab:CreateToggle({ Name="Fling All", CurrentValue=flingAll, Callback=function(v) flingAll=v if v then spawn(function() while flingAll do for _,plr in ipairs(Players:GetPlayers()) do if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then local hrp=plr.Character.HumanoidRootPart local root=LocalPlayer.Character.HumanoidRootPart for i=1,60 do root.CFrame=CFrame.new(hrp.Position)*CFrame.Angles(0,math.rad(i*6),0) task.wait(0.01) end end end task.wait(0.5) end end) end end })
 FTAPTab:CreateToggle({ Name="Auto Delete Fling", CurrentValue=false, Callback=function(v) autoFTAPDelete=v end })
 
--- Fling on Grab Release + Delete
+-- Fixed Fling on Grab Release + Delete
+local grabMap = {}
 workspace.ChildAdded:Connect(function(obj)
-    if obj.Name=="GrabParts" and obj:FindFirstChild("GrabPart") then
-        local grabPart=obj.GrabPart
-        local weld=grabPart:FindFirstChildWhichIsA("WeldConstraint") or grabPart:FindFirstChildWhichIsA("Weld")
+    if obj.Name == "GrabParts" and obj:FindFirstChild("GrabPart") then
+        local gp = obj.GrabPart
+        local weld = gp:FindFirstChildWhichIsA("WeldConstraint") or gp:FindFirstChildWhichIsA("Weld")
         if antiGrabEnabled and weld then weld:Destroy() end
-        local part=weld and weld.Part1
-        obj:GetPropertyChangedSignal("Parent"):Connect(function()
-            if not obj.Parent and flingEnabled and part then
-                local bv=Instance.new("BodyVelocity")
-                bv.MaxForce=Vector3.new(1e9,1e9,1e9)
-                bv.Velocity=Camera.CFrame.LookVector * flingStrength
-                bv.Parent=part
-                Debris:AddItem(bv,0.4)
-                if autoFTAPDelete then
-                    local bv2=Instance.new("BodyVelocity")
-                    bv2.MaxForce=Vector3.new(1e9,1e9,1e9)
-                    bv2.Velocity=Camera.CFrame.LookVector * 25000
-                    bv2.Parent=part
-                    Debris:AddItem(bv2,0.4)
-                    if part.Parent and part.Parent:FindFirstChildOfClass("Humanoid") then
-                        part.Parent:BreakJoints()
-                    end
-                end
+        if weld then grabMap[obj] = weld.Part1 end
+    end
+end)
+workspace.ChildRemoved:Connect(function(obj)
+    local part = grabMap[obj]
+    grabMap[obj] = nil
+    if part and flingEnabled then
+        -- Fling using slider
+        local bv1 = Instance.new("BodyVelocity")
+        bv1.MaxForce = Vector3.new(1e9,1e9,1e9)
+        bv1.Velocity = Camera.CFrame.LookVector * flingStrength
+        bv1.Parent = part
+        Debris:AddItem(bv1,0.4)
+        -- Auto Delete Fling fixed 25k studs
+        if autoFTAPDelete then
+            local bv2 = Instance.new("BodyVelocity")
+            bv2.MaxForce = Vector3.new(1e9,1e9,1e9)
+            bv2.Velocity = Camera.CFrame.LookVector * 25000
+            bv2.Parent = part
+            Debris:AddItem(bv2,0.4)
+            if part.Parent and part.Parent:FindFirstChildOfClass("Humanoid") then
+                part.Parent:BreakJoints()
             end
-        end)
+        end
     end
 end)
 
@@ -259,20 +259,18 @@ local LowHP,RecoverHP,SafeFlyHeight,SafeFlySpeed=0.35,0.55,1000,50
 local SafeFly=false
 
 local function enableSafeFly()
-    local hrp=LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    local humanoid=LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
     if hrp and humanoid then
         SafeFly=true; humanoid.PlatformStand=true; hrp.Anchored=true; hrp.CFrame=hrp.CFrame+Vector3.new(0,SafeFlyHeight,0)
-        while SafeFly do local dt=RunService.Heartbeat:Wait(); hrp.CFrame=hrp.CFrame+Vector3.new(0,SafeFlySpeed*dt,0)
-            if humanoid.Health/humanoid.MaxHealth>=RecoverHP then SafeFly=false end
-        end
+        while SafeFly do local dt=RunService.Heartbeat:Wait() hrp.CFrame=hrp.CFrame+Vector3.new(0,SafeFlySpeed*dt,0) if humanoid.Health/humanoid.MaxHealth>=RecoverHP then SafeFly=false end end
         hrp.Anchored=false; humanoid.PlatformStand=false
     end
 end
 
 local function autofarmTSB()
     while autofarmEnabled do
-        local hrp=LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if hrp then
             if not TSBTargetPlayer or not TSBTargetPlayer.Character or TSBTargetPlayer.Character:FindFirstChildOfClass("Humanoid").Health<=0 then
                 local dist,nearest=math.huge,nil
@@ -288,8 +286,8 @@ local function autofarmTSB()
                 TSBTargetPlayer=nearest
             end
             if TSBTargetPlayer and TSBTargetPlayer.Character then
-                local targetHRP=TSBTargetPlayer.Character:FindFirstChild("HumanoidRootPart")
-                TweenService:Create(hrp,TweenInfoTSB,{CFrame=targetHRP.CFrame*CFrame.new(0,3,3)}):Play()
+                local tHRP = TSBTargetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                TweenService:Create(hrp,TweenInfoTSB,{CFrame=tHRP.CFrame*CFrame.new(0,3,3)}):Play()
                 local humanoid=LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
                 if humanoid and humanoid.Health/humanoid.MaxHealth<=LowHP then enableSafeFly() end
                 sendVirtualInput(Enum.UserInputType.MouseButton1)
@@ -308,7 +306,7 @@ end })
 -- ===== BloxFruits =====
 BloxFruits:CreateLabel("Coming soon...")
 
--- Notify loaded
+-- Notify Loaded
 Rayfield:Notify({Title="Nebula Hub Universal",Content="All tabs loaded!",Duration=3})
 
 -- Cleanup ESP

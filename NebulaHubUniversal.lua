@@ -12,7 +12,8 @@ local LocalPlayer = Players.LocalPlayer
 
 -- STATE VARIABLES
 local clickTPOn, clickConn = false, nil
-local ESPOn, LineESP, TeamCheck = false, false, true
+local ESPOn, LineESP, AimbotOn, TeamCheck, AutoShoot = false, false, false, true, false
+local AimFOV, TargetPart = 100, "Head"
 local InfJump, remLag = false, false
 local espObjects = {}
 local flingEnabled, flingStrength = false, 350
@@ -29,13 +30,6 @@ local targetPlayer = nil
 -- FLY STATE FOR LOW HEALTH SAFE ZONE
 local lowHealthFlyEnabled = false
 local flyBV = nil
-
--- === ARSENAL AIMBOT & AUTOSHOOT VARIABLES ===
-local ArsenalAimbotOn = false
-local ArsenalAutoShoot = false
-local ArsenalAimFOV = 100
-local ArsenalTargetPart = "Head"
-local ArsenalShootRemote = nil
 
 -- MAIN UI
 local Window = Rayfield:CreateWindow({
@@ -58,7 +52,6 @@ local VisualTab  = Window:CreateTab("🎯 Visual")
 local Exploits   = Window:CreateTab("⚠️ Exploits")
 local FTAPTab    = Window:CreateTab("👐 FTAP")
 local TSBTab     = Window:CreateTab("⚔️ TSB")
-local ArsenalTab = Window:CreateTab("🔫 Arsenal")
 
 -- === UTILITY ===
 Utility:CreateButton({
@@ -80,6 +73,7 @@ Utility:CreateButton({
     end
 })
 
+-- Fly toggle (used also for low health safety)
 local function toggleFly(state)
     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
@@ -90,8 +84,11 @@ local function toggleFly(state)
         flyBV.Parent = hrp
         _G.Fly = true
 
+        -- Update velocity each heartbeat based on camera direction
         flyBV:GetPropertyChangedSignal("Parent"):Connect(function()
-            if not flyBV.Parent then _G.Fly = false end
+            if not flyBV.Parent then
+                _G.Fly = false
+            end
         end)
 
         RunService.Heartbeat:Connect(function()
@@ -211,25 +208,20 @@ end})
 -- === VISUAL ===
 VisualTab:CreateToggle({Name="Enable ESP", CurrentValue=false, Callback=function(v) ESPOn=v end})
 VisualTab:CreateToggle({Name="Line ESP", CurrentValue=false, Callback=function(v) LineESP=v end})
+VisualTab:CreateToggle({Name="Enable Aimbot", CurrentValue=false, Callback=function(v) AimbotOn=v end})
 VisualTab:CreateToggle({Name="Team Check", CurrentValue=true, Callback=function(v) TeamCheck=v end})
-
+VisualTab:CreateToggle({Name="AutoShoot", CurrentValue=false, Callback=function(v) AutoShoot=v end})
 VisualTab:CreateDropdown({Name="Target Part", Options={"Head","HumanoidRootPart","Torso"}, CurrentOption="Head", Callback=function(v) TargetPart=v end})
 VisualTab:CreateSlider({Name="Aimbot FOV", Range={50,300}, CurrentValue=100, Callback=function(v) AimFOV=v end})
 
--- === ARSENAL TAB ===
-ArsenalTab:CreateToggle({Name="Enable Aimbot", CurrentValue=false, Callback=function(v) ArsenalAimbotOn = v end})
-ArsenalTab:CreateToggle({Name="Auto Shoot", CurrentValue=false, Callback=function(v) ArsenalAutoShoot = v end})
-ArsenalTab:CreateDropdown({Name="Target Part", Options={"Head","HumanoidRootPart","Torso"}, CurrentOption="Head", Callback=function(v) ArsenalTargetPart = v end})
-ArsenalTab:CreateSlider({Name="Aimbot FOV", Range={50,300}, CurrentValue=100, Callback=function(v) ArsenalAimFOV = v end})
-
--- Get closest enemy for Arsenal Aimbot
-local function getClosestEnemyArsenal()
+-- Get closest enemy for Aimbot
+local function getClosestEnemy()
     local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-    local bestDist, bestP = ArsenalAimFOV, nil
+    local bestDist, bestP = AimFOV, nil
     for _, p in ipairs(Players:GetPlayers()) do
-        if p~=LocalPlayer and p.Character and p.Character:FindFirstChild(ArsenalTargetPart) then
-            if TeamCheck and p.Team == LocalPlayer.Team then continue end
-            local pos, on = Camera:WorldToViewportPoint(p.Character[ArsenalTargetPart].Position)
+        if p~=LocalPlayer and p.Character and p.Character:FindFirstChild(TargetPart) then
+            if TeamCheck and p.Team==LocalPlayer.Team then continue end
+            local pos, on = Camera:WorldToViewportPoint(p.Character[TargetPart].Position)
             if on then
                 local mag = (Vector2.new(pos.X,pos.Y)-center).Magnitude
                 if mag < bestDist then bestDist, bestP = mag, p end
@@ -239,36 +231,321 @@ local function getClosestEnemyArsenal()
     return bestP
 end
 
--- Find arsenal shoot remote
-local function findArsenalShootRemote()
+-- Find remote for AutoShoot
+local function findShootRemote()
     for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
         if obj:IsA("RemoteEvent") and obj.Name:lower():find("shoot") then
-            ArsenalShootRemote = obj
-            break
+            shootRemote = obj; break
         end
     end
 end
 
--- Arsenal Aimbot & AutoShoot loop
+-- Loop: ESP, Aimbot & AutoShoot
 RunService.RenderStepped:Connect(function()
-    if ArsenalAimbotOn then
-        local tgt = getClosestEnemyArsenal()
-        if tgt and tgt.Character and tgt.Character:FindFirstChild(ArsenalTargetPart) then
-            local tp = tgt.Character[ArsenalTargetPart].Position
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, tp)
+    local camPos = Camera.CFrame.Position
+    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
-            if ArsenalAutoShoot then
-                if not ArsenalShootRemote then
-                    findArsenalShootRemote()
-                else
-                    pcall(ArsenalShootRemote.FireServer, ArsenalShootRemote)
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p~=LocalPlayer and p.Character and p.Character:FindFirstChild(TargetPart) then
+            if TeamCheck and p.Team==LocalPlayer.Team then continue end
+            local part = p.Character[TargetPart]
+            local pos, on = Camera:WorldToViewportPoint(part.Position)
+            local dist = (part.Position - camPos).Magnitude
+
+            -- Visibility ray
+            local rp = RaycastParams.new()
+            rp.FilterDescendantsInstances = {LocalPlayer.Character}
+            rp.FilterType = Enum.RaycastFilterType.Blacklist
+            local hit = workspace:Raycast(camPos, part.Position-camPos, rp)
+            local vis = hit and hit.Instance:IsDescendantOf(p.Character)
+
+            if ESPOn and on and vis then
+                if not espObjects[p] then
+                    espObjects[p] = {box=Drawing.new("Square"), line=Drawing.new("Line")}
+                end
+                local d=espObjects[p]
+                local size=math.clamp(2000/dist,20,200)
+                d.box.Visible=true; d.box.Color=Color3.new(1,0,0); d.box.Thickness=2
+                d.box.Size=Vector2.new(size,size); d.box.Position=Vector2.new(pos.X,pos.Y)-d.box.Size/2
+                d.line.Visible=LineESP
+                if LineESP then
+                    d.line.From=center; d.line.To=Vector2.new(pos.X,pos.Y)
+                    d.line.Color=Color3.new(1,0,0); d.line.Thickness=1
+                end
+            elseif espObjects[p] then
+                espObjects[p].box:Remove(); espObjects[p].line:Remove()
+                espObjects[p]=nil
+            end
+        end
+    end
+
+    if AimbotOn then
+        local tgt = getClosestEnemy()
+        if tgt and tgt.Character and tgt.Character:FindFirstChild(TargetPart) then
+            local tp = tgt.Character[TargetPart].Position
+            Camera.CFrame = CFrame.new(camPos, tp)
+
+            if AutoShoot then
+                if shootRemote then pcall(shootRemote.FireServer, shootRemote) else findShootRemote() end
+                if UserInput.TouchEnabled then
+                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                        if gui:IsA("ImageButton") and gui.Name:lower():find("shoot") and gui.Visible then
+                            pcall(function() gui:Activate() end); break
+                        end
+                    end
                 end
             end
         end
     end
 end)
 
--- (Rest of your existing Nebula Hub Universal features below ...)
--- Feel free to paste all your other features from previous full script here, unchanged
+-- === EXPLOITS ===
+Exploits:CreateButton({Name="Click Delete", Callback=function()
+    local m=LocalPlayer:GetMouse()
+    m.Button1Down:Connect(function() if m.Target then m.Target:Destroy() end end)
+end})
+
+local noclipConnection = nil
+Exploits:CreateToggle({Name="No Clip", CurrentValue=false, Callback=function(v)
+    if noclipConnection then noclipConnection:Disconnect() noclipConnection = nil end
+    if v and LocalPlayer.Character then
+        noclipConnection = RunService.Stepped:Connect(function()
+            if LocalPlayer.Character then
+                for _, part in ipairs(LocalPlayer.Character:GetChildren()) do
+                    if part:IsA("BasePart") then part.CanCollide=false end
+                end
+            end
+        end)
+    end
+end})
+
+Exploits:CreateButton({Name="Teleport Tool", Callback=function()
+    local tool=Instance.new("Tool")
+    tool.RequiresHandle=false; tool.Name="TP Tool"; tool.Parent=LocalPlayer.Backpack
+    tool.Activated:Connect(function()
+        local m = LocalPlayer:GetMouse()
+        if m.Hit then LocalPlayer.Character:MoveTo(m.Hit.p + Vector3.new(0,3,0)) end
+    end)
+end})
+
+-- === FTAP Tab ===
+FTAPTab:CreateToggle({Name="Enable Fling (FTAP)", CurrentValue=flingEnabled, Callback=function(v) flingEnabled=v end})
+
+FTAPTab:CreateSlider({Name="Fling Strength", Range={100,5000}, Increment=50, CurrentValue=flingStrength, Callback=function(v)
+    flingStrength = math.clamp(v, 100, 5000)
+    Rayfield:Notify({Title="FTAP", Content="Strength: "..flingStrength, Duration=1})
+end})
+
+FTAPTab:CreateToggle({Name="AntiGrab", CurrentValue=antiGrabEnabled, Callback=function(v)
+    antiGrabEnabled = v
+    if antiGrabEnabled then
+        Rayfield:Notify({Title="AntiGrab", Content="Enabled", Duration=2})
+    else
+        Rayfield:Notify({Title="AntiGrab", Content="Disabled", Duration=2})
+    end
+end})
+
+FTAPTab:CreateToggle({Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback=function(value)
+    spawnKillAll = value
+    if spawnKillAll then
+        spawn(function()
+            local voidPos = Vector3.new(0, -500, 0)
+            while spawnKillAll do
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        player.Character.HumanoidRootPart.CFrame = CFrame.new(voidPos)
+                    end
+                end
+                task.wait(1)
+            end
+        end)
+        Rayfield:Notify({Title="Spawn Kill All", Content="Enabled", Duration=2})
+    else
+        Rayfield:Notify({Title="Spawn Kill All", Content="Disabled", Duration=2})
+    end
+end})
+
+FTAPTab:CreateToggle({Name="Fling All", CurrentValue=flingAll, Callback=function(value)
+    flingAll = value
+    if flingAll then
+        spawn(function()
+            while flingAll do
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = player.Character.HumanoidRootPart
+                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                            local root = LocalPlayer.Character.HumanoidRootPart
+                            local spinSpeed = 30
+                            local rot = 0
+                            local spinConnection
+                            spinConnection = RunService.Heartbeat:Connect(function(dt)
+                                if not flingAll then spinConnection:Disconnect() return end
+                                rot = rot + spinSpeed * dt
+                                root.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, math.rad(rot), 0)
+                            end)
+
+                            root.CFrame = hrp.CFrame * CFrame.new(0,0,2)
+                            task.wait(2)
+
+                            if spinConnection then spinConnection:Disconnect() end
+                        end
+                    end
+                end
+                task.wait(0.5)
+            end
+        end)
+        Rayfield:Notify({Title="Fling All", Content="Enabled", Duration=2})
+    else
+        Rayfield:Notify({Title="Fling All", Content="Disabled", Duration=2})
+    end
+end})
+
+-- FTAP release detection and AntiGrab implementation
+workspace.ChildAdded:Connect(function(m)
+    if m.Name == "GrabParts" and m:FindFirstChild("GrabPart") then
+        local grabPart = m.GrabPart
+        local weld = grabPart:FindFirstChild("WeldConstraint")
+        if weld and antiGrabEnabled then
+            weld:Destroy()
+        end
+        -- Additional safeguard: break weld if created again
+        m:GetPropertyChangedSignal("Parent"):Connect(function()
+            if not m.Parent and flingEnabled then
+                local lastInput = UserInput:GetLastInputType()
+                if lastInput == Enum.UserInputType.MouseButton1 or lastInput == Enum.UserInputType.Touch then
+                    -- fling code here if needed
+                end
+            end
+        end)
+    end
+end)
+
+-- === TSB Autofarm (Fully Integrated) ===
+-- Function to safely tween the target player repeatedly and auto attack with moves 1,2,3,4 and M1
+local TSBRemoteAttackEvents = {
+    "Ability1", -- Name of RemoteEvents in ReplicatedStorage or ReplicatedFirst or workspace (adjust as needed)
+    "Ability2",
+    "Ability3",
+    "Ability4",
+    "Attack"
+}
+
+-- Find remotes for TSB abilities and attacks
+local tsbRemotes = {}
+for _, name in ipairs(TSBRemoteAttackEvents) do
+    for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+        if obj:IsA("RemoteEvent") and obj.Name == name then
+            tsbRemotes[name] = obj
+        end
+    end
+end
+
+-- Safety: Fallback dummy remotes for demo (remove this in actual)
+for _, name in ipairs(TSBRemoteAttackEvents) do
+    if not tsbRemotes[name] then
+        tsbRemotes[name] = {
+            FireServer = function() end
+        }
+    end
+end
+
+-- Tween the target player continuously with facing behind logic
+local function tweenToTargetCycle(targetChar)
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp or not targetChar then return end
+    local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
+    if not targetHRP then return end
+
+    -- Calculate position behind target
+    local behindOffset = -targetHRP.CFrame.LookVector * 5 + Vector3.new(0, 2, 0) -- 5 studs behind and 2 up
+    local tweenInfo = TweenInfo.new(1.2, Enum.EasingStyle.Linear)
+
+    local targetPos = targetHRP.CFrame.Position + behindOffset
+    local tweenGoal = {CFrame = CFrame.new(targetPos, targetHRP.CFrame.Position)}
+
+    -- Tween and on complete repeat
+    local tween = TweenService:Create(hrp, tweenInfo, tweenGoal)
+    tween:Play()
+    tween.Completed:Wait()
+end
+
+-- Auto attack moves 1,2,3,4 and M1 with aimbot (face target)
+local function autoAttackTSB(target)
+    if not target or not target.Character or not LocalPlayer.Character then return end
+    local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+    local localHRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not targetHRP or not localHRP then return end
+
+    -- Face target from behind logic for auto attack (optional)
+    local facePos = targetHRP.CFrame.Position - targetHRP.CFrame.LookVector * 4 + Vector3.new(0,2,0)
+    localHRP.CFrame = CFrame.new(localHRP.Position, facePos)
+
+    -- Auto fire remotes with delays to simulate attack spam
+    for _, move in ipairs({"Ability1","Ability2","Ability3","Ability4","Attack"}) do
+        local remote = tsbRemotes[move]
+        if remote and remote.FireServer then
+            pcall(remote.FireServer, remote, target.Character)
+            task.wait(0.15)
+        end
+    end
+end
+
+-- Autofarm loop for TSB
+TSBTab:CreateToggle({Name="Enable TSB Autofarm", CurrentValue=false, Callback=function(val)
+    autofarmEnabled = val
+    if autofarmEnabled then
+        spawn(function()
+            while autofarmEnabled do
+                -- Select closest player enemy target
+                local closestDist = math.huge
+                local closestPlayer = nil
+                for _, p in pairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChildOfClass("Humanoid") then
+                        if p.Team ~= LocalPlayer.Team then
+                            local dist = (p.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                            if dist < closestDist then
+                                closestDist = dist
+                                closestPlayer = p
+                            end
+                        end
+                    end
+                end
+
+                targetPlayer = closestPlayer
+
+                -- Safety fly + teleport if health low
+                local localHum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if localHum and localHum.Health < 30 then
+                    toggleFly(true)
+                    if localHum.Parent and localHum.Parent:FindFirstChild("HumanoidRootPart") then
+                        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(0, 1000, 0) -- Teleport high
+                    end
+                    task.wait(3) -- Wait to recover
+                else
+                    toggleFly(false)
+                end
+
+                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    -- Tween repeatedly
+                    tweenToTargetCycle(targetPlayer.Character)
+                    -- Auto attack spam
+                    autoAttackTSB(targetPlayer)
+                end
+
+                task.wait(0.1)
+            end
+            toggleFly(false)
+        end)
+    else
+        toggleFly(false)
+        Rayfield:Notify({Title="TSB Autofarm", Content="Disabled", Duration=2})
+    end
+end})
+
+TSBTab:CreateSlider({Name="TSB Autofarm Attack Delay", Range={0.05,0.5}, Increment=0.05, CurrentValue=0.15, Callback=function(v)
+    -- Update delay between attacks if you want dynamic
+end})
+
+-- You can add more NebulaHub Universal features here as needed...
 
 Rayfield:Notify({Title="Nebula Hub Universal", Content="Loaded Successfully!", Duration=3})

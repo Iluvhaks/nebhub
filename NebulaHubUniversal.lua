@@ -31,6 +31,9 @@ local targetPlayer = nil
 local lowHealthFlyEnabled = false
 local flyBV = nil
 
+-- TRACK GRABBED PARTS FOR FLING ON RELEASE
+local grabbedParts = {}
+
 -- MAIN UI
 local Window = Rayfield:CreateWindow({
     Name = "Nebula Hub Universal",
@@ -400,33 +403,71 @@ FTAPTab:CreateToggle({Name="Fling All", CurrentValue=flingAll, Callback=function
     end
 end})
 
--- FTAP release detection with fixed fling on release
-workspace.ChildRemoved:Connect(function(m)
-    if m.Name == "GrabParts" and flingEnabled then
-        local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not root then return end
+-- TRACK GrabParts children when added
+workspace.ChildAdded:Connect(function(m)
+    if m.Name == "GrabParts" then
+        grabbedParts = {}
+        for _, part in pairs(m:GetChildren()) do
+            table.insert(grabbedParts, part)
+        end
 
-        local bv = Instance.new("BodyVelocity")
-        bv.Velocity = root.CFrame.LookVector * flingStrength + Vector3.new(0, flingStrength * 0.5, 0)
-        bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-        bv.Parent = root
-
-        Debris:AddItem(bv, 0.5)
+        -- AntiGrab Weld destroyer
+        if antiGrabEnabled then
+            local weld = m:FindFirstChild("GrabPart") and m.GrabPart:FindFirstChild("WeldConstraint")
+            if weld then weld:Destroy() end
+        end
     end
 end)
 
--- === TSB Autofarm (Fully Integrated) ===
--- Functionality to auto farm in TSB here (placeholder)
-TSBTab:CreateToggle({Name="Autofarm TSB", CurrentValue=false, Callback=function(value)
-    autofarmEnabled = value
+-- On GrabParts removal, fling grabbed parts if enabled
+workspace.ChildRemoved:Connect(function(m)
+    if m.Name == "GrabParts" and flingEnabled then
+        for _, part in pairs(grabbedParts) do
+            if part and part.Parent then
+                local bv = Instance.new("BodyVelocity")
+                bv.Velocity = part.CFrame.LookVector * flingStrength + Vector3.new(0, flingStrength * 0.5, 0)
+                bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+                bv.Parent = part
+                Debris:AddItem(bv, 0.5)
+            end
+        end
+        grabbedParts = {}
+    end
+end)
+
+-- === TSB AUTO FARM ===
+TSBTab:CreateToggle({Name="AutoFarm TSB", CurrentValue=false, Callback=function(v)
+    autofarmEnabled = v
     if autofarmEnabled then
-        Rayfield:Notify({Title="TSB Autofarm", Content="Enabled", Duration=2})
-        -- Add autofarm logic here
+        spawn(function()
+            while autofarmEnabled do
+                -- Find player with lowest health (excluding LocalPlayer)
+                local lowestHp = math.huge
+                local target = nil
+                for _, p in pairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChildOfClass("Humanoid") then
+                        local hp = p.Character:FindFirstChildOfClass("Humanoid").Health
+                        if hp < lowestHp then
+                            lowestHp = hp
+                            target = p
+                        end
+                    end
+                end
+
+                if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    if root then
+                        LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 3, 2)
+                    end
+                end
+
+                task.wait(0.7)
+            end
+        end)
+        Rayfield:Notify({Title="AutoFarm TSB", Content="Enabled", Duration=2})
     else
-        Rayfield:Notify({Title="TSB Autofarm", Content="Disabled", Duration=2})
+        Rayfield:Notify({Title="AutoFarm TSB", Content="Disabled", Duration=2})
     end
 end})
 
--- You can add more buttons/sliders/toggles for other features
-
--- The script ends here
+-- END OF SCRIPT

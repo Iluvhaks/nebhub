@@ -159,17 +159,24 @@ workspace.ChildAdded:Connect(function(obj)
         local part = weld and weld.Part1
         obj:GetPropertyChangedSignal("Parent"):Connect(function()
             if not obj.Parent and flingEnabled and part then
+                -- Apply fling with slider strength
                 local bv = Instance.new("BodyVelocity")
-                bv.MaxForce = Vector3.new(1e9,1e9,1e9)
+                bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
                 bv.Velocity = Camera.CFrame.LookVector * flingStrength
                 bv.Parent = part
                 Debris:AddItem(bv, 0.4)
+                -- Auto Delete Fling uses fixed 25000 studs
                 if autoFTAPDelete then
                     local bv2 = Instance.new("BodyVelocity")
-                    bv2.MaxForce = Vector3.new(1e9,1e9,1e9)
+                    bv2.MaxForce = Vector3.new(1e9, 1e9, 1e9)
                     bv2.Velocity = Camera.CFrame.LookVector * 25000
                     bv2.Parent = part
                     Debris:AddItem(bv2, 0.4)
+                    -- Break character joints to delete
+                    local char = part.Parent
+                    if char and char:FindFirstChildOfClass("Humanoid") then
+                        char:BreakJoints()
+                    end
                 end
             end
         end)

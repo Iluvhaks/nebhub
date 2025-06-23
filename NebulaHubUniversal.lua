@@ -298,6 +298,67 @@ Exploits:CreateButton({Name="Teleport Tool", Callback=function()
 end})
 
 -- FTAP Tab
+
+local grabDistance = 30 -- Adjust to your game's grab distance
+
+local function grabCharacter(targetChar)
+    if not (targetChar and targetChar:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")) then return false end
+    local localHRP = LocalPlayer.Character.HumanoidRootPart
+    local targetHRP = targetChar.HumanoidRootPart
+
+    local weld = Instance.new("WeldConstraint")
+    weld.Part0 = localHRP
+    weld.Part1 = targetHRP
+    weld.Parent = localHRP
+
+    return weld
+end
+
+local function releaseGrab(weld)
+    if weld and weld.Parent then
+        local targetHRP = weld.Part1
+        local targetChar = targetHRP and targetHRP.Parent
+        if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+            targetChar.HumanoidRootPart.CFrame = CFrame.new(50000, 50000, 50000)
+        end
+        weld:Destroy()
+    end
+end
+
+local spawnKillAllCoroutine = nil
+local function startSpawnKillAll()
+    if spawnKillAllCoroutine then return end
+
+    spawnKillAllCoroutine = coroutine.create(function()
+        while spawnKillAll do
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local localHRP = LocalPlayer.Character.HumanoidRootPart
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local targetHRP = player.Character.HumanoidRootPart
+                        local dist = (localHRP.Position - targetHRP.Position).Magnitude
+                        if dist <= grabDistance + 5 then
+                            localHRP.CFrame = targetHRP.CFrame * CFrame.new(0, 5, 0)
+                            local weld = grabCharacter(player.Character)
+                            task.wait(0.2)
+                            releaseGrab(weld)
+                            task.wait(0.3)
+                        end
+                    end
+                end
+            end
+            task.wait(0.5)
+        end
+    end)
+
+    coroutine.resume(spawnKillAllCoroutine)
+end
+
+local function stopSpawnKillAll()
+    spawnKillAll = false
+    spawnKillAllCoroutine = nil
+end
+
 FTAPTab:CreateToggle({Name="Enable Fling (FTAP)", CurrentValue=flingEnabled, Callback=function(v) flingEnabled=v end})
 
 FTAPTab:CreateSlider({Name="Fling Strength", Range={100,5000}, Increment=50, CurrentValue=flingStrength, Callback=function(v)
@@ -310,23 +371,19 @@ FTAPTab:CreateToggle({Name="AntiGrab", CurrentValue=antiGrabEnabled, Callback=fu
     Rayfield:Notify({Title="AntiGrab", Content=antiGrabEnabled and "Enabled" or "Disabled", Duration=2})
 end})
 
-FTAPTab:CreateToggle({Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback=function(value)
-    spawnKillAll = value
+FTAPTab:CreateToggle({Name="Delete Player on Grab Release", CurrentValue=deletePlayerOnRelease, Callback=function(v)
+    deletePlayerOnRelease = v
+    Rayfield:Notify({Title="Delete Player", Content=deletePlayerOnRelease and "Enabled" or "Disabled", Duration=2})
+end})
+
+FTAPTab:CreateToggle({Name="Spawn Kill All (Reworked)", CurrentValue=false, Callback=function(v)
+    spawnKillAll = v
     if spawnKillAll then
-        spawn(function()
-            local voidPos = Vector3.new(0, -500, 0)
-            while spawnKillAll do
-                for _, player in pairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        player.Character.HumanoidRootPart.CFrame = CFrame.new(voidPos)
-                    end
-                end
-                task.wait(1)
-            end
-        end)
-        Rayfield:Notify({Title="Spawn Kill All", Content="Enabled", Duration=2})
+        Rayfield:Notify({Title="Spawn Kill All", Content="Started", Duration=2})
+        startSpawnKillAll()
     else
-        Rayfield:Notify({Title="Spawn Kill All", Content="Disabled", Duration=2})
+        Rayfield:Notify({Title="Spawn Kill All", Content="Stopped", Duration=2})
+        stopSpawnKillAll()
     end
 end})
 
@@ -355,27 +412,13 @@ FTAPTab:CreateToggle({Name="Fling All", CurrentValue=flingAll, Callback=function
                             if spinConnection then spinConnection:Disconnect() end
                         end
                     end
+                    task.wait(0.1)
                 end
-                task.wait(0.5)
             end
         end)
-        Rayfield:Notify({Title="Fling All", Content="Enabled", Duration=2})
-    else
-        Rayfield:Notify({Title="Fling All", Content="Disabled", Duration=2})
     end
 end})
 
--- New toggle: Delete Player on Grab Release
-FTAPTab:CreateToggle({
-    Name = "Delete Player on Grab Release",
-    CurrentValue = false,
-    Callback = function(value)
-        deletePlayerOnRelease = value
-        Rayfield:Notify({Title="Delete Player", Content=deletePlayerOnRelease and "Enabled" or "Disabled", Duration=2})
-    end
-})
-
--- FTAP release detection and AntiGrab implementation with Delete Player
 workspace.ChildAdded:Connect(function(m)
     if m.Name == "GrabParts" and m:FindFirstChild("GrabPart") then
         local grabPart = m.GrabPart
@@ -385,18 +428,15 @@ workspace.ChildAdded:Connect(function(m)
             weld:Destroy()
         end
 
-        -- Listen for grab release
         m:GetPropertyChangedSignal("Parent"):Connect(function()
             if not m.Parent then
                 local part = weld and weld.Part1
                 if part and deletePlayerOnRelease then
                     local character = part:FindFirstAncestorOfClass("Model")
                     if character and character:FindFirstChild("HumanoidRootPart") then
-                        -- Teleport player 25,000 studs away
                         character.HumanoidRootPart.CFrame = CFrame.new(25000, 25000, 25000)
                     end
                 elseif part and flingEnabled then
-                    -- Existing fling code
                     local bv = Instance.new("BodyVelocity")
                     bv.MaxForce = Vector3.new(1e9,1e9,1e9)
                     bv.Velocity = Camera.CFrame.LookVector * flingStrength
@@ -408,49 +448,32 @@ workspace.ChildAdded:Connect(function(m)
     end
 end)
 
--- TSB TAB: Autofarm
-
-local function findAttackRemotes()
-    local remotes = {}
-    for _, obj in pairs(ReplicatedStorage:GetDescendants()) do
-        if obj:IsA("RemoteEvent") and obj.Name:lower():find("attack") then
-            table.insert(remotes, obj)
-        end
-    end
-    return remotes
-end
-
-TSBTab:CreateToggle({
-    Name = "Auto Farm",
-    CurrentValue = false,
-    Callback = function(value)
-        autofarmEnabled = value
-        if autofarmEnabled then
-            spawn(function()
-                while autofarmEnabled do
-                    local closestPlayer, closestDist = nil, math.huge
-                    for _, player in pairs(Players:GetPlayers()) do
-                        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChildOfClass("Humanoid") then
-                            local dist = (player.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                            if dist < closestDist then
-                                closestDist = dist
-                                closestPlayer = player
-                            end
-                        end
+-- TSB Auto Farm tab (example autofarm basic)
+TSBTab:CreateToggle({Name="Enable Autofarm", CurrentValue=false, Callback=function(v)
+    autofarmEnabled = v
+    if autofarmEnabled then
+        spawn(function()
+            while autofarmEnabled do
+                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local targetPos = targetPlayer.Character.HumanoidRootPart.Position
+                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(targetPos + Vector3.new(0,5,0))
                     end
-                    if closestPlayer then
-                        local remotes = findAttackRemotes()
-                        for _, remote in pairs(remotes) do
-                            pcall(function()
-                                remote:FireServer(closestPlayer.Character)
-                            end)
-                        end
-                    end
-                    task.wait(1)
                 end
-            end)
-        end
+                task.wait(1)
+            end
+        end)
     end
-})
+end})
 
--- END OF SCRIPT
+TSBTab:CreateDropdown({Name="Target Player", Options=function()
+    local options = {}
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then table.insert(options, p.Name) end
+    end
+    return options
+end, CurrentOption=nil, Callback=function(selected)
+    targetPlayer = Players:FindFirstChild(selected)
+end})
+
+Rayfield:Notify({Title="Nebula Hub Universal", Content="Script Loaded Successfully", Duration=3})

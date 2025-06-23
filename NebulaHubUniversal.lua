@@ -1,4 +1,4 @@
--- Nebula Hub Universal Full Script with TSB Autofarm
+-- Nebula Hub Universal Full Script with TSB Autofarm, FTAP, and Delete Player on Grab Release
 
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 if not Rayfield then return warn("Failed to load Rayfield UI.") end
@@ -370,20 +370,25 @@ FTAPTab:CreateToggle({Name="Fling All", CurrentValue=flingAll, Callback=function
     end
 end})
 
--- FTAP release detection and AntiGrab implementation
+-- FTAP release detection, AntiGrab and Delete Player on Grab Release
+
 workspace.ChildAdded:Connect(function(m)
     if m.Name == "GrabParts" and m:FindFirstChild("GrabPart") then
         local grabPart = m.GrabPart
         local weld = grabPart:FindFirstChild("WeldConstraint")
+
         if weld and antiGrabEnabled then
             weld:Destroy()
         end
-        -- Additional safeguard: break weld if created again
-        m:GetPropertyChangedSignal("Parent"):Connect(function()
-            if not m.Parent and flingEnabled then
-                local lastInput = UserInput:GetLastInputType()
-                if lastInput == Enum.UserInputType.MouseButton1 or lastInput == Enum.UserInputType.Touch then
-                    local part = weld and weld.Part1 or nil
+
+        -- On Weld removal (grab release)
+        local function onWeldRemoved()
+            -- Delay a bit to detect if the grabPart is still there
+            task.wait(0.1)
+
+            if not grabPart:FindFirstChild("WeldConstraint") then
+                if flingEnabled then
+                    local part = grabPart
                     if part then
                         local bv = Instance.new("BodyVelocity")
                         bv.MaxForce = Vector3.new(1e9,1e9,1e9)
@@ -392,123 +397,74 @@ workspace.ChildAdded:Connect(function(m)
                         Debris:AddItem(bv, 0.3)
                     end
                 end
+
+                -- DELETE PLAYER ON RELEASE: teleport grabbed player's character far away (25000 studs)
+                local grabbedPlayer
+                for _, player in pairs(Players:GetPlayers()) do
+                    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart == grabPart then
+                        grabbedPlayer = player
+                        break
+                    end
+                end
+
+                if grabbedPlayer and grabbedPlayer.Character and grabbedPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    grabbedPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(25000, 25000, 25000)
+                    Rayfield:Notify({Title="FTAP", Content="Deleted player "..grabbedPlayer.Name.." on grab release.", Duration=3})
+                end
             end
-        end)
+        end
+
+        if weld then
+            weld.Destroying:Connect(onWeldRemoved)
+        end
     end
 end)
 
--- TSB TAB: Autofarm
-
-local function findAttackRemotes()
-    local remotes = {}
-    for _, obj in pairs(ReplicatedStorage:GetDescendants()) do
-        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-            local nameLower = obj.Name:lower()
-            if nameLower:find("attack") or nameLower:find("ability") or nameLower:find("m1") then
-                table.insert(remotes, obj)
-            end
-        end
-    end
-    return remotes
-end
-
-local function attackTarget(target)
-    local char = LocalPlayer.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if not hum or hum.Health <= 0 then return false end
-    if not target.Character or not target.Character:FindFirstChild("Humanoid") then return false end
-    local targetHum = target.Character.Humanoid
-    if targetHum.Health <= 0 then return false end
-
-    local attackRemotes = findAttackRemotes()
-    for _, remote in pairs(attackRemotes) do
-        pcall(function()
-            if remote:IsA("RemoteEvent") then
-                remote:FireServer(target.Character)
-            elseif remote:IsA("RemoteFunction") then
-                remote:InvokeServer(target.Character)
-            end
-        end)
-    end
-    return true
-end
-
-local function teleportToTarget(target)
-    if not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = target.Character.HumanoidRootPart
-    local myChar = LocalPlayer.Character
-    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
-    local offset = hrp.CFrame.LookVector * 1.5
-    myChar.HumanoidRootPart.CFrame = hrp.CFrame * CFrame.new(offset.X, 0, offset.Z)
-end
-
-local function getSafePosition()
-    local spawnLocation = workspace:FindFirstChild("SpawnLocation") or workspace:FindFirstChild("Spawn")
-    if spawnLocation then
-        return spawnLocation.Position + Vector3.new(0,5,0)
-    else
-        return Vector3.new(0, 50, 0)
-    end
-end
-
-local function autofarmLoop()
-    while autofarmEnabled do
-        local playersList = {}
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
-                table.insert(playersList, p)
-            end
-        end
-
-        for i, p in ipairs(playersList) do
-            if not autofarmEnabled then break end
-            targetPlayer = p
-
-            teleportToTarget(p)
-            task.wait(0.3)
-
-            while autofarmEnabled and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 do
-                local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-                if not hum or hum.Health <= 0 then break end
-
-                if hum.Health / hum.MaxHealth < 0.35 then
-                    local safePos = getSafePosition()
-                    if safePos then
-                        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(safePos)
-                    end
-                    repeat task.wait(1) until (hum.Health / hum.MaxHealth) >= 0.5 or not autofarmEnabled
-                    teleportToTarget(p)
-                    task.wait(0.3)
-                end
-
-                attackTarget(p)
-                task.wait(0.6)
-            end
-            task.wait(0.5)
-        end
-
-        task.wait(1)
-    end
-end
-
+-- TSB Tab Autofarm Example (Basic)
 TSBTab:CreateToggle({
-    Name = "Autofarm (Tele + Attack)",
+    Name = "TSB Autofarm",
     CurrentValue = false,
-    Callback = function(value)
-        autofarmEnabled = value
+    Callback = function(v)
+        autofarmEnabled = v
         if autofarmEnabled then
-            task.spawn(autofarmLoop)
-            Rayfield:Notify({Title = "TSB Autofarm", Content = "Enabled", Duration = 2})
+            Rayfield:Notify({Title="TSB Autofarm", Content="Enabled", Duration=2})
+            spawn(function()
+                while autofarmEnabled do
+                    -- Find nearest enemy and attack
+                    local nearest = nil
+                    local nearestDist = math.huge
+                    for _, p in pairs(Players:GetPlayers()) do
+                        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                            local dist = (LocalPlayer.Character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                            if dist < nearestDist then
+                                nearestDist = dist
+                                nearest = p
+                            end
+                        end
+                    end
+                    if nearest and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                        -- Teleport close and attack (example)
+                        LocalPlayer.Character.HumanoidRootPart.CFrame = nearest.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
+                        -- Simulate attack here with remote or tool (user can customize)
+                    end
+                    task.wait(1)
+                end
+            end)
         else
-            Rayfield:Notify({Title = "TSB Autofarm", Content = "Disabled", Duration = 2})
+            Rayfield:Notify({Title="TSB Autofarm", Content="Disabled", Duration=2})
         end
     end
 })
 
--- CLEANUP ESP ON EXIT
-game:BindToClose(function()
-    for _, v in pairs(espObjects) do
-        if v.box then v.box:Remove() end
-        if v.line then v.line:Remove() end
+-- Clean up esp when player leaves
+Players.PlayerRemoving:Connect(function(p)
+    if espObjects[p] then
+        espObjects[p].box:Remove()
+        espObjects[p].line:Remove()
+        espObjects[p] = nil
     end
 end)
+
+Rayfield:Notify({Title="Nebula Hub", Content="Loaded successfully!", Duration=3})
+
+-- End of Script

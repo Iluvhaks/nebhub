@@ -400,152 +400,33 @@ FTAPTab:CreateToggle({Name="Fling All", CurrentValue=flingAll, Callback=function
     end
 end})
 
--- FTAP release detection and AntiGrab implementation
-workspace.ChildAdded:Connect(function(m)
-    if m.Name == "GrabParts" and m:FindFirstChild("GrabPart") then
-        local grabPart = m.GrabPart
-        local weld = grabPart:FindFirstChild("WeldConstraint")
-        if weld and antiGrabEnabled then
-            weld:Destroy()
-        end
-        -- Additional safeguard: break weld if created again
-        m:GetPropertyChangedSignal("Parent"):Connect(function()
-            if not m.Parent and flingEnabled then
-                local lastInput = UserInput:GetLastInputType()
-                if lastInput == Enum.UserInputType.MouseButton1 or lastInput == Enum.UserInputType.Touch then
-                    -- fling code here if needed
-                end
-            end
-        end)
+-- FTAP release detection with fixed fling on release
+workspace.ChildRemoved:Connect(function(m)
+    if m.Name == "GrabParts" and flingEnabled then
+        local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+
+        local bv = Instance.new("BodyVelocity")
+        bv.Velocity = root.CFrame.LookVector * flingStrength + Vector3.new(0, flingStrength * 0.5, 0)
+        bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+        bv.Parent = root
+
+        Debris:AddItem(bv, 0.5)
     end
 end)
 
 -- === TSB Autofarm (Fully Integrated) ===
--- Function to safely tween the target player repeatedly and auto attack with moves 1,2,3,4 and M1
-local TSBRemoteAttackEvents = {
-    "Ability1", -- Name of RemoteEvents in ReplicatedStorage or ReplicatedFirst or workspace (adjust as needed)
-    "Ability2",
-    "Ability3",
-    "Ability4",
-    "Attack"
-}
-
--- Find remotes for TSB abilities and attacks
-local tsbRemotes = {}
-for _, name in ipairs(TSBRemoteAttackEvents) do
-    for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-        if obj:IsA("RemoteEvent") and obj.Name == name then
-            tsbRemotes[name] = obj
-        end
-    end
-end
-
--- Safety: Fallback dummy remotes for demo (remove this in actual)
-for _, name in ipairs(TSBRemoteAttackEvents) do
-    if not tsbRemotes[name] then
-        tsbRemotes[name] = {
-            FireServer = function() end
-        }
-    end
-end
-
--- Tween the target player continuously with facing behind logic
-local function tweenToTargetCycle(targetChar)
-    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp or not targetChar then return end
-    local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
-    if not targetHRP then return end
-
-    -- Calculate position behind target
-    local behindOffset = -targetHRP.CFrame.LookVector * 5 + Vector3.new(0, 2, 0) -- 5 studs behind and 2 up
-    local tweenInfo = TweenInfo.new(1.2, Enum.EasingStyle.Linear)
-
-    local targetPos = targetHRP.CFrame.Position + behindOffset
-    local tweenGoal = {CFrame = CFrame.new(targetPos, targetHRP.CFrame.Position)}
-
-    -- Tween and on complete repeat
-    local tween = TweenService:Create(hrp, tweenInfo, tweenGoal)
-    tween:Play()
-    tween.Completed:Wait()
-end
-
--- Auto attack moves 1,2,3,4 and M1 with aimbot (face target)
-local function autoAttackTSB(target)
-    if not target or not target.Character or not LocalPlayer.Character then return end
-    local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
-    local localHRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not targetHRP or not localHRP then return end
-
-    -- Face target from behind logic for auto attack (optional)
-    local facePos = targetHRP.CFrame.Position - targetHRP.CFrame.LookVector * 4 + Vector3.new(0,2,0)
-    localHRP.CFrame = CFrame.new(localHRP.Position, facePos)
-
-    -- Auto fire remotes with delays to simulate attack spam
-    for _, move in ipairs({"Ability1","Ability2","Ability3","Ability4","Attack"}) do
-        local remote = tsbRemotes[move]
-        if remote and remote.FireServer then
-            pcall(remote.FireServer, remote, target.Character)
-            task.wait(0.15)
-        end
-    end
-end
-
--- Autofarm loop for TSB
-TSBTab:CreateToggle({Name="Enable TSB Autofarm", CurrentValue=false, Callback=function(val)
-    autofarmEnabled = val
+-- Functionality to auto farm in TSB here (placeholder)
+TSBTab:CreateToggle({Name="Autofarm TSB", CurrentValue=false, Callback=function(value)
+    autofarmEnabled = value
     if autofarmEnabled then
-        spawn(function()
-            while autofarmEnabled do
-                -- Select closest player enemy target
-                local closestDist = math.huge
-                local closestPlayer = nil
-                for _, p in pairs(Players:GetPlayers()) do
-                    if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChildOfClass("Humanoid") then
-                        if p.Team ~= LocalPlayer.Team then
-                            local dist = (p.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                            if dist < closestDist then
-                                closestDist = dist
-                                closestPlayer = p
-                            end
-                        end
-                    end
-                end
-
-                targetPlayer = closestPlayer
-
-                -- Safety fly + teleport if health low
-                local localHum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-                if localHum and localHum.Health < 30 then
-                    toggleFly(true)
-                    if localHum.Parent and localHum.Parent:FindFirstChild("HumanoidRootPart") then
-                        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(0, 1000, 0) -- Teleport high
-                    end
-                    task.wait(3) -- Wait to recover
-                else
-                    toggleFly(false)
-                end
-
-                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    -- Tween repeatedly
-                    tweenToTargetCycle(targetPlayer.Character)
-                    -- Auto attack spam
-                    autoAttackTSB(targetPlayer)
-                end
-
-                task.wait(0.1)
-            end
-            toggleFly(false)
-        end)
+        Rayfield:Notify({Title="TSB Autofarm", Content="Enabled", Duration=2})
+        -- Add autofarm logic here
     else
-        toggleFly(false)
         Rayfield:Notify({Title="TSB Autofarm", Content="Disabled", Duration=2})
     end
 end})
 
-TSBTab:CreateSlider({Name="TSB Autofarm Attack Delay", Range={0.05,0.5}, Increment=0.05, CurrentValue=0.15, Callback=function(v)
-    -- Update delay between attacks if you want dynamic
-end})
+-- You can add more buttons/sliders/toggles for other features
 
--- You can add more NebulaHub Universal features here as needed...
-
-Rayfield:Notify({Title="Nebula Hub Universal", Content="Loaded Successfully!", Duration=3})
+-- The script ends here

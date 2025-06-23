@@ -1,6 +1,10 @@
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-if not Rayfield then return warn("Failed to load Rayfield UI.") end
+--== Nebula Hub Universal – Full Updated Script ==--
 
+-- GUI Loader
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+if not Rayfield then return warn("Failed to load Nebula Hub UI") end
+
+-- Core Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -10,621 +14,476 @@ local TweenService = game:GetService("TweenService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
--- STATE VARIABLES
+--= Internal State Variables =--
 local clickTPOn, clickConn = false, nil
-local ESPOn, LineESP, AimbotOn, TeamCheck, AutoShoot = false, false, false, true, false
+local ESPOn, LineESP, TeamCheck, AutoShoot = false, false, true, false
 local AimFOV, TargetPart = 100, "Head"
 local InfJump, remLag = false, false
 local espObjects = {}
 local flingEnabled, flingStrength = false, 350
+local antiGrabEnabled, spawnKillAll, flingAll = false, false, false
 local shootRemote = nil
 
-local antiGrabEnabled = false
-local spawnKillAll = false
-local flingAll = false
+-- TSB Autofarm Variables
+local tsbEnabled, tsbTarget = false, nil
+local tsbFlyMode = false
+local tsbSafePos = Vector3.new(0,500,0)
 
--- AUTOFARM TSB VARIABLES
-local autofarmEnabled = false
-local targetPlayer = nil
+-- Blox Fruits Autofarm Variables
+local bfEnabled, bfPrimary = false, "Melee"
+local bfLastAttack = 0
+local bfTweenInfo = TweenInfo.new(3, Enum.EasingStyle.Linear)
+local bfLevelTable = {
+    -- First Sea
+    {min=1, max=9, pos=Vector3.new(340,7,1534), npc="Monkey D. Luffy", quest="Monkey D. Luffy"},
+    {min=10,max=14,pos=Vector3.new(-1524,7,1602),npc="Pirate Morgan",quest="Pirate Morgan"},
+    {min=15,max=29,pos=Vector3.new(-506,7,1067),npc="Bandit Leader",quest="Bandit Leader"},
+    -- Second Sea
+    {min=30,max=39,pos=Vector3.new(452,7,-3673),npc="Desert Bandit",quest="Desert Bandit"},
+    {min=40,max=59,pos=Vector3.new(1864,7,-3888),npc="Baroque Works",quest="Baroque Works"},
+    {min=60,max=89,pos=Vector3.new(-537,7,-3076),npc="Ice Queen",quest="Ice Queen"},
+    -- Third Sea
+    {min=90,max=99,pos=Vector3.new(-123,7,-6907),npc="Fishman Raider",quest="Fishman Raider"},
+    {min=100,max=149,pos=Vector3.new(-198,7,-7482),npc="Shanks",quest="Shanks"},
+    {min=150,max=199,pos=Vector3.new(-3500,7,-12000),npc="Kaido",quest="Kaido"},
+}
 
--- UTILITY FUNCTION: Virtual Input for Mobile
-local function sendVirtualInput(key)
+-- Utility functions
+local function sendInput(key)
     if UserInputService.TouchEnabled then
         if typeof(key) == "string" then
             UserInputService:SetKeyDown(Enum.KeyCode[key])
             task.wait(0.1)
             UserInputService:SetKeyUp(Enum.KeyCode[key])
-        elseif key == Enum.UserInputType.MouseButton1 then
-            UserInputService:SetMouseButtonPressed(Enum.UserInputType.MouseButton1)
-            task.wait(0.1)
-            UserInputService:SetMouseButtonReleased(Enum.UserInputType.MouseButton1)
+        else
+            UserInputService:SetMouseButtonPressed(key)
+            task.wait(0.05)
+            UserInputService:SetMouseButtonReleased(key)
         end
     end
 end
 
--- MAIN UI
-local Window = Rayfield:CreateWindow({
-    Name = "Nebula Hub Universal",
-    LoadingTitle = "Nebula Hub Universal",
-    SubText = "Made by Elden and Nate",
-    Theme = "Default",
-    ToggleUIKeybind = Enum.KeyCode.K,
-    ConfigurationSaving = {Enabled=true, FileName="NebulaHubUniversal"},
-    Discord = {Enabled=true, Invite="yTxgQcTUw4", RememberJoins=true},
-    KeySystem = false
-})
-
--- TABS
-local Utility    = Window:CreateTab("🧠 Utility")
-local Troll      = Window:CreateTab("💣 Troll")
-local AutoTab    = Window:CreateTab("🤖 Auto")
-local RemoteTab  = Window:CreateTab("📡 Remotes")
-local VisualTab  = Window:CreateTab("🎯 Visual")
-local Exploits   = Window:CreateTab("⚠️ Exploits")
-local FTAPTab    = Window:CreateTab("👐 FTAP")
-local TSBTab     = Window:CreateTab("⚔️ TSB")
-local BloxFruitsTab = Window:CreateTab("🍉 Blox Fruits")
-
--- UTILITY TAB
-Utility:CreateButton({
-    Name = "Click TP (Toggle)",
-    Callback = function()
-        clickTPOn = not clickTPOn
-        if clickTPOn then
-            clickConn = LocalPlayer:GetMouse().Button1Down:Connect(function()
-                local m = LocalPlayer:GetMouse()
-                if m.Target then
-                    LocalPlayer.Character:MoveTo(m.Hit.p + Vector3.new(0,3,0))
-                end
+local function toggleFly(state)
+    tsbFlyMode = state
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        if state then
+            local bv=Instance.new("BodyVelocity", hrp)
+            bv.Name="tsbFlyBV"; bv.MaxForce=Vector3.new(1e9,1e9,1e9)
+            RunService.Heartbeat:Connect(function()
+                if tsbFlyMode then
+                    local v=Vector3.new()
+                    local cv=Camera.CFrame
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) then v+=cv.LookVector*60 end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.S) then v-=cv.LookVector*60 end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.A) then v-=cv.RightVector*60 end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.D) then v+=cv.RightVector*60 end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then v+=Vector3.new(0,60,0) end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then v-=Vector3.new(0,60,0) end
+                    bv.Velocity=v
+                else bv:Destroy() end
             end)
-            Rayfield:Notify({Title="Click TP", Content="Enabled", Duration=2})
         else
-            if clickConn then clickConn:Disconnect() clickConn=nil end
-            Rayfield:Notify({Title="Click TP", Content="Disabled", Duration=2})
+            local bv = hrp:FindFirstChild("tsbFlyBV")
+            if bv then bv:Destroy() end
         end
     end
-})
+end
 
-Utility:CreateButton({
-    Name = "Fly Toggle",
-    Callback = function()
-        _G.Fly = not _G.Fly
-        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-        local bv = Instance.new("BodyVelocity", hrp)
-        bv.MaxForce = Vector3.new(1e9,1e9,1e9)
-        while _G.Fly and hrp.Parent do RunService.Stepped:Wait(); bv.Velocity = Camera.CFrame.LookVector * 60 end
+local function findShootRemote()
+    for _,o in ipairs(ReplicatedStorage:GetDescendants()) do
+        if o:IsA("RemoteEvent") and o.Name:lower():find("shoot") then
+            shootRemote=o; break
+        end
+    end
+end
+
+-- TSB Autofarm Logic
+local function tsbAutoLoop()
+    findShootRemote()
+    while tsbEnabled do
+        local char=LocalPlayer.Character
+        local hum=char and char:FindFirstChildOfClass("Humanoid")
+        local hrp=char and char:FindFirstChild("HumanoidRootPart")
+        if hum and hrp and hum.Health > 0 then
+            if hum.Health < hum.MaxHealth*0.35 and not tsbFlyMode then
+                hrp.CFrame=CFrame.new(tsbSafePos); toggleFly(true)
+                task.wait(1)
+            elseif hum.Health >= hum.MaxHealth*0.55 and tsbFlyMode and tsbTarget then
+                toggleFly(false); hrp.CFrame = tsbTarget.Character.HumanoidRootPart.CFrame + Vector3.new(0,3,0)
+            end
+
+            if not tsbTarget or not tsbTarget.Character or not tsbTarget.Character:FindFirstChild("HumanoidRootPart") then
+                tsbTarget=nil
+                for _,p in ipairs(Players:GetPlayers()) do
+                    if p~=LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        tsbTarget=p; break
+                    end
+                end
+            end
+
+            if tsbTarget and tsbTarget.Character and tsbTarget.Character:FindFirstChild("HumanoidRootPart") then
+                local tp = tsbTarget.Character.HumanoidRootPart.Position + Vector3.new(0,3,0)
+                TweenService:Create(hrp, TweenInfo.new(0.3,Enum.EasingStyle.Linear),{CFrame=CFrame.new(tp)}):Play()
+                UserInputService.TouchEnabled and sendInput(Enum.UserInputType.MouseButton1) or
+                (shootRemote and pcall(shootRemote.FireServer,shootRemote))
+                Camera.CFrame=CFrame.new(Camera.CFrame.Position, tsbTarget.Character.HumanoidRootPart.Position)
+                task.wait(0.15)
+            else
+                task.wait(2)
+            end
+        else task.wait(1) end
+    end
+end
+
+-- Blox Fruits Utils
+local function getLevel()
+    local ls = LocalPlayer:FindFirstChild("leaderstats")
+    local lv = ls and (ls:FindFirstChild("Level") or ls:FindFirstChild("level"))
+    return lv and lv.Value or 1
+end
+
+local function getQuestInfo(lv)
+    for _,v in ipairs(bfLevelTable) do
+        if lv>=v.min and lv<=v.max then return v end
+    end
+end
+
+local function tweenBF(pos)
+    local hrp=LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then TweenService:Create(hrp,bfTweenInfo,{CFrame=CFrame.new(pos+Vector3.new(0,5,0))}):Play():Wait() end
+end
+
+local function findNPC(name)
+    for _,npc in ipairs(workspace:FindFirstChild("NPCs") and workspace.NPCs:GetChildren() or {}) do
+        if npc.Name == name then return npc end
+    end
+end
+
+local function acceptQuest(npc)
+    local dl=ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("StartQuest")
+    if dl then pcall(function() dl:FireServer(npc.Name) end) end
+end
+
+local function completeQuest(name)
+    local pq=ReplicatedStorage:FindFirstChild("PlayerQuests") and ReplicatedStorage.PlayerQuests:FindFirstChild(name)
+    return pq and pq.Value=="Complete"
+end
+
+local function findMobs(npc)
+    local arr={}
+    for _,m in ipairs(workspace:FindFirstChild("Enemies") and workspace.Enemies:GetChildren() or {}) do
+        if m:FindFirstChild("HumanoidRootPart") and (m.HumanoidRootPart.Position - npc.HumanoidRootPart.Position).Magnitude < 60 then
+            table.insert(arr,m)
+        end
+    end
+    return arr
+end
+
+local function canAttackBF()
+    return tick() - bfLastAttack >= 0.3
+end
+
+local function attackBF()
+    bfLastAttack = tick()
+    if bfPrimary == "Melee" or bfPrimary=="Sword" then
+        if UserInputService.TouchEnabled then sendInput(Enum.UserInputType.MouseButton1) 
+        else
+            local rn = bfPrimary=="Melee" and "MeleeAttack" or "SwordAttack"
+            local re = ReplicatedStorage:FindFirstChild(rn) or ReplicatedStorage:FindFirstChild(rn:sub(1, -7))
+            if re and re:IsA("RemoteEvent") then pcall(function() re:FireServer() end) end
+        end
+    else
+        local tool=LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
+        if tool and tool.Name:find("Fruit") and tool:FindFirstChild("RemoteEvent") then
+            pcall(function() tool.RemoteEvent:FireServer() end)
+        elseif UserInputService.TouchEnabled then 
+            sendInput(Enum.UserInputType.MouseButton1) 
+        end
+    end
+end
+
+local function bfKillAura(npc)
+    for _,m in ipairs(findMobs(npc)) do
+        if m.Humanoid.Health>0 then
+            tweenBF(m.HumanoidRootPart.Position)
+            attackBF()
+            task.wait(0.3)
+        end
+    end
+end
+
+-- GUI Construction
+local Window = Rayfield:CreateWindow{ Name="Nebula Hub Universal", ToggleUIKeybind=Enum.KeyCode.K, ConfigurationSaving={Enabled=true, FileName="NebulaHubUniversal"} }
+local U = Window:CreateTab("🧠 Utility")
+local T = Window:CreateTab("💣 Troll")
+local A = Window:CreateTab("🤖 Auto")
+local R = Window:CreateTab("📡 Remotes")
+local V = Window:CreateTab("🎯 Visual")
+local X = Window:CreateTab("⚠️ Exploits")
+local F = Window:CreateTab("👐 FTAP")
+local S = Window:CreateTab("⚔️ TSB")
+local B = Window:CreateTab("🍉 Blox Fruits")
+
+-- Utility Tab Elements
+U:CreateButton{ Name="Click TP (Toggle)", Callback=function()
+    clickTPOn = not clickTPOn
+    if clickTPOn then
+        clickConn = LocalPlayer:GetMouse().Button1Down:Connect(function()
+            local m=LocalPlayer:GetMouse()
+            if m.Target then LocalPlayer.Character:MoveTo(m.Hit.p+Vector3.new(0,3,0)) end
+        end)
+        Rayfield:Notify{Title="Click TP", Content="Enabled", Duration=2}
+    else
+        if clickConn then clickConn:Disconnect() end
+        Rayfield:Notify{Title="Click TP", Content="Disabled", Duration=2}
+    end
+end}
+U:CreateButton{ Name="Fly Toggle", Callback=function()
+    _G.Fly = not _G.Fly
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        local bv=Instance.new("BodyVelocity", hrp)
+        bv.MaxForce=Vector3.new(1e9,1e9,1e9)
+        while _G.Fly and hrp.Parent do RunService.Stepped:Wait(); bv.Velocity=Camera.CFrame.LookVector*60 end
         bv:Destroy()
     end
-})
-
-UserInputService.JumpRequest:Connect(function()
-    if InfJump and LocalPlayer.Character then
-        local h = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if h then h:ChangeState("Jumping") end
-    end
-end)
-
-Utility:CreateToggle({Name="Infinite Jump", CurrentValue=false, Callback=function(v) InfJump=v end})
-
-Utility:CreateSlider({Name="Walk Speed", Range={16,200}, CurrentValue=16, Callback=function(v)
-    local h = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+end}
+U:CreateToggle{ Name="Infinite Jump", CurrentValue=false, Callback=function(v) InfJump=v end }
+U:CreateSlider{ Name="Walk Speed", Range={16,200}, CurrentValue=16, Callback=function(v)
+    local h=LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
     if h then h.WalkSpeed=v end
-end})
-
-Utility:CreateSlider({Name="Jump Power", Range={50,300}, CurrentValue=100, Callback=function(v)
-    local h = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+end}
+U:CreateSlider{ Name="Jump Power", Range={50,300}, CurrentValue=100, Callback=function(v)
+    local h=LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
     if h then h.UseJumpPower=true; h.JumpPower=v end
-end})
-
-Utility:CreateButton({Name="Anti-AFK", Callback=function()
+end}
+U:CreateButton{ Name="Anti-AFK", Callback=function()
     for _,c in pairs(getconnections(LocalPlayer.Idled)) do c:Disable() end
-end})
+end }
 
--- TROLL TAB
-Troll:CreateButton({Name="Fake Kick", Callback=function() LocalPlayer:Kick("Fake Kick - Nebula Hub Universal") end})
-
-Troll:CreateButton({Name="Chat Spam", Callback=function()
+-- Troll Tab Elements
+T:CreateButton{ Name="Fake Kick", Callback=function() LocalPlayer:Kick("Fake Kick - Nebula Hub Universal") end }
+T:CreateButton{ Name="Chat Spam", Callback=function()
     spawn(function() while task.wait(0.25) do
         pcall(function() ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer("Nebula Hub OP!","All") end)
     end end)
-end})
-
-Troll:CreateButton({Name="Fling Self", Callback=function()
-    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+end}
+T:CreateButton{ Name="Fling Self", Callback=function()
+    local hrp=LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if hrp then
         local bv=Instance.new("BodyVelocity",hrp)
-        bv.Velocity=Vector3.new(9999,9999,9999)
-        bv.MaxForce=Vector3.new(math.huge,math.huge,math.huge)
+        bv.Velocity=Vector3.new(1e4,1e4,1e4)
+        bv.MaxForce=Vector3.new(1e9,1e9,1e9)
         task.wait(0.5)
         bv:Destroy()
     end
-end})
+end }
 
--- AUTO TAB
-AutoTab:CreateButton({Name="Auto Move", Callback=function()
-    _G.AutoMove = true; spawn(function()
+-- Auto Tab Elements
+A:CreateButton{ Name="Auto Move", Callback=function()
+    _G.AutoMove=true; spawn(function()
         while _G.AutoMove do
-            if LocalPlayer.Character then 
-                LocalPlayer.Character:MoveTo(Vector3.new(math.random(-100,100),10,math.random(-100,100))) 
+            if LocalPlayer.Character then
+                LocalPlayer.Character:MoveTo(Vector3.new(math.random(-100,100),10,math.random(-100,100)))
             end
             task.wait(0.8)
         end
     end)
-end})
-
-AutoTab:CreateButton({Name="Touch Everything", Callback=function()
-    local rt = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    for _, p in ipairs(workspace:GetDescendants()) do
+end}
+A:CreateButton{ Name="Touch Everything", Callback=function()
+    local rt=LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    for _,p in ipairs(workspace:GetDescendants()) do
         if p:IsA("TouchTransmitter") and rt then
-            firetouchinterest(rt, p.Parent, 0)
-            firetouchinterest(rt, p.Parent, 1)
+            firetouchinterest(rt,p.Parent,0)
+            firetouchinterest(rt,p.Parent,1)
         end
     end
-end})
+end}
 
--- REMOTES TAB
-RemoteTab:CreateButton({Name="Toggle Remote Lagging", Callback=function()
-    remLag = not remLag
-    Rayfield:Notify({Title="Remote Lag", Content=remLag and "Enabled" or "Disabled", Duration=2})
+-- Remote Tab Elements
+R:CreateButton{ Name="Toggle Remote Lagging", Callback=function()
+    remLag=not remLag
+    Rayfield:Notify{Title="Remote Lag", Content=(remLag and "Enabled" or "Disabled"), Duration=2}
     if remLag then spawn(function()
         while remLag do
-            for _, obj in ipairs(workspace:GetDescendants()) do
+            for _,obj in ipairs(workspace:GetDescendants()) do
                 if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
                     pcall(function()
-                        if obj:IsA("RemoteEvent") then obj:FireServer("NebulaSpam")
-                        else obj:InvokeServer("NebulaSpam") end
+                        if obj:IsA("RemoteEvent") then obj:FireServer("NebulaSpam") end
+                        if obj:IsA("RemoteFunction") then obj:InvokeServer("NebulaSpam") end
                     end)
                 end
             end
             task.wait(0.05)
         end
     end) end
-end})
-
-RemoteTab:CreateButton({Name="Scan Remotes", Callback=function()
-    for _, obj in ipairs(workspace:GetDescendants()) do
+end}
+R:CreateButton{ Name="Scan Remotes", Callback=function()
+    for _,obj in ipairs(workspace:GetDescendants()) do
         if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
             print("[Remote] "..obj:GetFullName())
         end
     end
-end})
+end}
 
--- VISUAL TAB
-VisualTab:CreateToggle({Name="Enable ESP", CurrentValue=false, Callback=function(v) ESPOn=v end})
-VisualTab:CreateToggle({Name="Line ESP", CurrentValue=false, Callback=function(v) LineESP=v end})
-VisualTab:CreateToggle({Name="Enable Aimbot", CurrentValue=false, Callback=function(v) AimbotOn=v end})
-VisualTab:CreateToggle({Name="Team Check", CurrentValue=true, Callback=function(v) TeamCheck=v end})
-VisualTab:CreateToggle({Name="AutoShoot", CurrentValue=false, Callback=function(v) AutoShoot=v end})
-VisualTab:CreateDropdown({Name="Target Part", Options={"Head","HumanoidRootPart","Torso"}, CurrentOption="Head", Callback=function(v) TargetPart=v end})
-VisualTab:CreateSlider({Name="Aimbot FOV", Range={50,300}, CurrentValue=100, Callback=function(v) AimFOV=v end})
+-- Visual Tab Elements
+V:CreateToggle{ Name="Enable ESP", CurrentValue=false, Callback=function(v) ESPOn=v end }
+V:CreateToggle{ Name="Line ESP", CurrentValue=false, Callback=function(v) LineESP=v end }
+V:CreateToggle{ Name="Enable Aimbot", CurrentValue=false, Callback=function(v) AimbotOn=v end }
+V:CreateToggle{ Name="Team Check", CurrentValue=true, Callback=function(v) TeamCheck=v end }
+V:CreateToggle{ Name="AutoShoot", CurrentValue=false, Callback=function(v) AutoShoot=v end }
+V:CreateDropdown{ Name="Target Part", Options={"Head","HumanoidRootPart","Torso"}, CurrentOption="Head", Callback=function(v) TargetPart=v end }
+V:CreateSlider{ Name="Aimbot FOV", Range={50,300}, CurrentValue=100, Callback=function(v) AimFOV=v end }
 
--- Get closest enemy for Aimbot
-local function getClosestEnemy()
-    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-    local bestDist, bestP = AimFOV, nil
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p~=LocalPlayer and p.Character and p.Character:FindFirstChild(TargetPart) then
-            if TeamCheck and p.Team==LocalPlayer.Team then continue end
-            local pos, on = Camera:WorldToViewportPoint(p.Character[TargetPart].Position)
-            if on then
-                local mag = (Vector2.new(pos.X,pos.Y)-center).Magnitude
-                if mag < bestDist then bestDist, bestP = mag, p end
-            end
-        end
-    end
-    return bestP
-end
-
--- Find remote for AutoShoot
-local function findShootRemote()
-    for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-        if obj:IsA("RemoteEvent") and obj.Name:lower():find("shoot") then
-            shootRemote = obj; break
-        end
-    end
-end
-
--- Loop: ESP, Aimbot & AutoShoot
+-- Visual/Aimbot Loop
 RunService.RenderStepped:Connect(function()
-    local camPos = Camera.CFrame.Position
-    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-
-    for _, p in ipairs(Players:GetPlayers()) do
+    local camPos=Camera.CFrame.Position
+    local center=Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y/2)
+    for _,p in ipairs(Players:GetPlayers()) do
         if p~=LocalPlayer and p.Character and p.Character:FindFirstChild(TargetPart) then
             if TeamCheck and p.Team==LocalPlayer.Team then continue end
-            local part = p.Character[TargetPart]
-            local pos, on = Camera:WorldToViewportPoint(part.Position)
-            local dist = (part.Position - camPos).Magnitude
-
-            -- Visibility ray
-            local rp = RaycastParams.new()
-            rp.FilterDescendantsInstances = {LocalPlayer.Character}
-            rp.FilterType = Enum.RaycastFilterType.Blacklist
-            local hit = workspace:Raycast(camPos, part.Position-camPos, rp)
-            local vis = hit and hit.Instance:IsDescendantOf(p.Character)
-
-            if ESPOn and on and vis then
-                if not espObjects[p] then
-                    espObjects[p] = {box=Drawing.new("Square"), line=Drawing.new("Line")}
+            local part=p.Character[TargetPart]
+            local pos,on=Camera:WorldToViewportPoint(part.Position)
+            if on and part then
+                local dist=(part.Position-camPos).Magnitude
+                local rp=RaycastParams.new()
+                rp.FilterDescendantsInstances={LocalPlayer.Character}
+                rp.FilterType=Enum.RaycastFilterType.Blacklist
+                local hit=workspace:Raycast(camPos,part.Position-camPos,rp)
+                local vis=hit and hit.Instance:IsDescendantOf(p.Character)
+                if ESPOn then
+                    if not espObjects[p] then
+                        espObjects[p]={box=Drawing.new("Square"), line=Drawing.new("Line")}
+                    end
+                    local d=espObjects[p]
+                    local size=math.clamp(2000/dist,20,200)
+                    d.box.Visible=true; d.box.Color=Color3.new(1,0,0); d.box.Size=Vector2.new(size,size)
+                    d.box.Position=Vector2.new(pos.X,pos.Y)-d.box.Size/2
+                    d.box.Thickness=2
+                    d.line.Visible=LineESP
+                    if LineESP then
+                        d.line.From=center; d.line.To=Vector2.new(pos.X,pos.Y)
+                        d.line.Color=Color3.new(1,0,0); d.line.Thickness=1
+                    end
                 end
-                local d=espObjects[p]
-                local size=math.clamp(2000/dist,20,200)
-                d.box.Visible=true; d.box.Color=Color3.new(1,0,0); d.box.Thickness=2
-                d.box.Size=Vector2.new(size,size); d.box.Position=Vector2.new(pos.X,pos.Y)-d.box.Size/2
-                d.line.Visible=LineESP
-                if LineESP then
-                    d.line.From=center; d.line.To=Vector2.new(pos.X,pos.Y)
-                    d.line.Color=Color3.new(1,0,0); d.line.Thickness=1
-                end
-            elseif espObjects[p] then
-                espObjects[p].box:Remove(); espObjects[p].line:Remove()
-                espObjects[p]=nil
-            end
-        end
-    end
-
-    if AimbotOn then
-        local tgt = getClosestEnemy()
-        if tgt and tgt.Character and tgt.Character:FindFirstChild(TargetPart) then
-            local tp = tgt.Character[TargetPart].Position
-            Camera.CFrame = CFrame.new(camPos, tp)
-
-            if AutoShoot then
-                if shootRemote then pcall(shootRemote.FireServer, shootRemote) else findShootRemote() end
-                if UserInputService.TouchEnabled then
-                    for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                        if gui:IsA("ImageButton") and gui.Name:lower():find("shoot") and gui.Visible then
-                            pcall(function() gui:Activate() end); break
-                        end
+                if AimbotOn and vis then
+                    Camera.CFrame=CFrame.new(camPos,part.Position)
+                    if AutoShoot then
+                        if shootRemote then pcall(shootRemote.FireServer,shootRemote) else sendInput(Enum.UserInputType.MouseButton1) end
                     end
                 end
             end
+        elseif espObjects[p] then
+            espObjects[p].box:Remove(); espObjects[p].line:Remove()
+            espObjects[p]=nil
         end
     end
 end)
 
--- EXPLOITS TAB
-Exploits:CreateButton({Name="Click Delete", Callback=function()
+-- Exploits Tab Elements
+X:CreateButton{ Name="Click Delete", Callback=function()
     local m=LocalPlayer:GetMouse()
-    m.Button1Down:Connect(function() if m.Target then m.Target:Destroy() end end)
-end})
-
-local noclipConnection = nil
-Exploits:CreateToggle({Name="No Clip", CurrentValue=false, Callback=function(v)
-    if noclipConnection then noclipConnection:Disconnect() noclipConnection = nil end
-    if v and LocalPlayer.Character then
-        noclipConnection = RunService.Stepped:Connect(function()
-            if LocalPlayer.Character then
-                for _, part in ipairs(LocalPlayer.Character:GetChildren()) do
-                    if part:IsA("BasePart") then part.CanCollide=false end
-                end
-            end
-        end)
-    end
-end})
-
-Exploits:CreateButton({Name="Teleport Tool", Callback=function()
-    local tool=Instance.new("Tool")
-    tool.RequiresHandle=false; tool.Name="TP Tool"; tool.Parent=LocalPlayer.Backpack
-    tool.Activated:Connect(function()
-        local m = LocalPlayer:GetMouse()
-        if m.Hit then LocalPlayer.Character:MoveTo(m.Hit.p + Vector3.new(0,3,0)) end
+    m.Button1Down:Connect(function()
+        if m.Target then m.Target:Destroy() end
     end)
-end})
-
--- FTAP Tab
-FTAPTab:CreateToggle({Name="Enable Fling (FTAP)", CurrentValue=flingEnabled, Callback=function(v) flingEnabled=v end})
-
-FTAPTab:CreateSlider({Name="Fling Strength", Range={100,5000}, Increment=50, CurrentValue=flingStrength, Callback=function(v)
-    flingStrength = math.clamp(v, 100, 5000)
-    Rayfield:Notify({Title="FTAP", Content="Strength: "..flingStrength, Duration=1})
-end})
-
-FTAPTab:CreateToggle({Name="AntiGrab", CurrentValue=antiGrabEnabled, Callback=function(v)
-    antiGrabEnabled = v
-    Rayfield:Notify({Title="AntiGrab", Content=(v and "Enabled" or "Disabled"), Duration=2})
-end})
-
-FTAPTab:CreateToggle({Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback=function(value)
-    spawnKillAll = value
-    if spawnKillAll then
-        spawn(function()
-            local voidPos = Vector3.new(0, -500, 0)
-            while spawnKillAll do
-                for _, player in pairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        player.Character.HumanoidRootPart.CFrame = CFrame.new(voidPos)
-                    end
-                end
-                task.wait(1)
-            end
-        end)
-        Rayfield:Notify({Title="Spawn Kill All", Content="Enabled", Duration=2})
-    else
-        Rayfield:Notify({Title="Spawn Kill All", Content="Disabled", Duration=2})
-    end
-end})
-
-FTAPTab:CreateToggle({Name="Fling All", CurrentValue=flingAll, Callback=function(value)
-    flingAll = value
-    if flingAll then
-        spawn(function()
-            while flingAll do
-                for _, player in pairs(Players:GetPlayers()) do
-                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        local hrp = player.Character.HumanoidRootPart
-                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                            local root = LocalPlayer.Character.HumanoidRootPart
-                            local spinSpeed = 30
-                            local rot = 0
-                            local spinConnection
-                            spinConnection = RunService.Heartbeat:Connect(function(dt)
-                                if not flingAll then spinConnection:Disconnect() return end
-                                rot = rot + spinSpeed * dt
-                                root.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, math.rad(rot), 0)
-                            end)
-
-                            root.CFrame = hrp.CFrame * CFrame.new(0,0,2)
-                            task.wait(2)
-
-                            if spinConnection then spinConnection:Disconnect() end
-                        end
-                    end
-                end
-                task.wait(0.5)
-            end
-        end)
-        Rayfield:Notify({Title="Fling All", Content="Enabled", Duration=2})
-    else
-        Rayfield:Notify({Title="Fling All", Content="Disabled", Duration=2})
-    end
-end})
-
--- FTAP release detection and AntiGrab implementation
-workspace.ChildAdded:Connect(function(m)
-    if m.Name == "GrabParts" and m:FindFirstChild("GrabPart") then
-        local grabPart = m.GrabPart
-        local weld = grabPart:FindFirstChild("WeldConstraint")
-        if weld and antiGrabEnabled then
-            weld:Destroy()
+end}
+X:CreateToggle{ Name="No Clip", CurrentValue=false, Callback=function(v)
+    local conn = v and RunService.Stepped:Connect(function()
+        for _,p in ipairs(LocalPlayer.Character:GetChildren()) do
+            if p:IsA("BasePart") then p.CanCollide=false end
         end
-        m:GetPropertyChangedSignal("Parent"):Connect(function()
-            if not m.Parent and flingEnabled then
-                local lastInput = UserInputService:GetLastInputType()
-                if lastInput == Enum.UserInputType.MouseButton1 or lastInput == Enum.UserInputType.Touch then
-                    local part = weld and weld.Part1 or nil
-                    if part then
-                        local bv = Instance.new("BodyVelocity")
-                        bv.MaxForce = Vector3.new(1e9,1e9,1e9)
-                        bv.Velocity = Vector3.new(0,0,50000)
-                        bv.Parent = part
-                        Debris:AddItem(bv, 0.3)
+    end)
+    if not v and conn then conn:Disconnect() end
+end}
+X:CreateButton{ Name="Teleport Tool", Callback=function()
+    local tool=Instance.new("Tool"); tool.RequiresHandle=false; tool.Name="TP Tool"; tool.Parent=LocalPlayer.Backpack
+    tool.Activated:Connect(function()
+        local m=LocalPlayer:GetMouse()
+        if m.Hit then LocalPlayer.Character:MoveTo(m.Hit.p+Vector3.new(0,3,0)) end
+    end)
+end}
+
+-- FTAP Tab Elements
+F:CreateToggle{ Name="Enable Fling (FTAP)", CurrentValue=flingEnabled, Callback=function(v) flingEnabled=v end }
+F:CreateSlider{ Name="Fling Strength", Range={100,5000}, Increment=50, CurrentValue=flingStrength, Callback=function(v)
+    flingStrength=v; Rayfield:Notify{Title="FTAP",Content="Strength: "..v,Duration=1}
+end}
+F:CreateToggle{ Name="AntiGrab", CurrentValue=antiGrabEnabled, Callback=function(v) antiGrabEnabled=v end }
+F:CreateToggle{ Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback=function(v)
+    spawnKillAll=v
+    if v then spawn(function()
+        while spawnKillAll do
+            for _,p in ipairs(Players:GetPlayers()) do
+                if p~=LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    p.Character.HumanoidRootPart.CFrame=CFrame.new(0,-500,0)
+                end
+            end
+            task.wait(1)
+        end
+    end) end
+end}
+F:CreateToggle{ Name="Fling All", CurrentValue=flingAll, Callback=function(v)
+    flingAll=v
+    if v then spawn(function()
+        while flingAll do
+            for _,p in ipairs(Players:GetPlayers()) do
+                if p~=LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    local hrp=LocalPlayer.Character.HumanoidRootPart
+                    local target=p.Character.HumanoidRootPart
+                    for i=1,60 do
+                        hrp.CFrame=CFrame.new(target.Position)+CFrame.Angles(0,math.rad(i*6),0)
+                        task.wait(0.01)
                     end
                 end
             end
-        end)
+            task.wait(0.5)
+        end
+    end) end
+end}
+workspace.ChildAdded:Connect(function(m)
+    if m.Name=="GrabParts" and m:FindFirstChild("GrabPart") and antiGrabEnabled then
+        local weld=m.GrabPart:FindFirstChild("WeldConstraint")
+        if weld then weld:Destroy() end
     end
 end)
 
--- TSB Tab autofarm (simplified example)
-local TSBAutofarmEnabled = false
-local TSB = TSBTab
+-- TSB Tab Autofarm Toggle
+S:CreateToggle{ Name="TSB Autofarm", CurrentValue=false, Callback=function(v)
+    tsbEnabled=v
+    if v then spawn(tsbAutoLoop) else toggleFly(false) end
+end}
 
-TSB:CreateToggle({
-    Name = "Auto Farm",
-    CurrentValue = false,
-    Callback = function(state)
-        TSBAutofarmEnabled = state
-        if state then
-            spawn(function()
-                while TSBAutofarmEnabled do
-                    -- Your existing TSB autofarm code goes here (not included in this snippet)
-                    task.wait(1)
-                end
-            end)
-        end
-    end
-})
-
--- BLOX FRUITS TAB (FULL FEATURED AUTOFARM)
-local primaryWeapon = "Melee"
-local lastAttackTime = 0
-local tweenInfoBF = TweenInfo.new(3, Enum.EasingStyle.Linear)
-local levelQuestMap = {
-    -- First Sea
-    {min = 1, max = 9, islandPos = Vector3.new(340, 7, 1534), npcName = "Monkey D. Luffy", questName = "Monkey D. Luffy"},
-    {min = 10, max = 14, islandPos = Vector3.new(-1524, 7, 1602), npcName = "Pirate Morgan", questName = "Pirate Morgan"},
-    {min = 15, max = 29, islandPos = Vector3.new(-506, 7, 1067), npcName = "Bandit Leader", questName = "Bandit Leader"},
-    -- Second Sea
-    {min = 30, max = 39, islandPos = Vector3.new(452, 7, -3673), npcName = "Desert Bandit", questName = "Desert Bandit"},
-    {min = 40, max = 59, islandPos = Vector3.new(1864, 7, -3888), npcName = "Baroque Works", questName = "Baroque Works"},
-    {min = 60, max = 89, islandPos = Vector3.new(-537, 7, -3076), npcName = "Ice Queen", questName = "Ice Queen"},
-    -- Third Sea
-    {min = 90, max = 99, islandPos = Vector3.new(-123, 7, -6907), npcName = "Fishman Raider", questName = "Fishman Raider"},
-    {min = 100, max = 149, islandPos = Vector3.new(-198, 7, -7482), npcName = "Shanks", questName = "Shanks"},
-    {min = 150, max = 199, islandPos = Vector3.new(-3500, 7, -12000), npcName = "Kaido", questName = "Kaido"},
-}
-
-local autofarmEnabledBF = false
-
-local function getPlayerLevelBF()
-    local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
-    if leaderstats then
-        local level = leaderstats:FindFirstChild("Level") or leaderstats:FindFirstChild("level")
-        if level then return level.Value end
-    end
-    return 1
-end
-
-local function getCurrentQuestInfoBF(level)
-    for _, v in ipairs(levelQuestMap) do
-        if level >= v.min and level <= v.max then
-            return v
-        end
-    end
-    return nil
-end
-
-local function tweenToBF(pos)
-    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        local tween = TweenService:Create(hrp, tweenInfoBF, {CFrame = CFrame.new(pos + Vector3.new(0, 5, 0))})
-        tween:Play()
-        tween.Completed:Wait()
-    end
-end
-
-local function findNPCBF(name)
-    for _, npc in ipairs(workspace:FindFirstChild("NPCs") and workspace.NPCs:GetChildren() or {}) do
-        if npc.Name == name then
-            return npc
-        end
-    end
-    return nil
-end
-
-local function acceptQuestBF(npc)
-    if not npc then return false end
-    local dialogue = ReplicatedStorage:WaitForChild("Remotes", 5):WaitForChild("StartQuest", 5)
-    if dialogue and dialogue:IsA("RemoteEvent") then
-        pcall(function() dialogue:FireServer(npc.Name) end)
-        return true
-    end
-    return false
-end
-
-local function isQuestCompleteBF(questName)
-    local playerQuests = ReplicatedStorage:FindFirstChild("PlayerQuests")
-    if playerQuests and playerQuests:FindFirstChild(questName) then
-        local status = playerQuests[questName].Value
-        return status == "Complete"
-    end
-    return false
-end
-
-local function findMobsForQuestBF(npc)
-    local mobs = {}
-    for _, mob in ipairs(workspace:FindFirstChild("Enemies") and workspace.Enemies:GetChildren() or {}) do
-        if mob:FindFirstChild("Humanoid") and mob:FindFirstChild("HumanoidRootPart") then
-            local dist = (mob.HumanoidRootPart.Position - npc.HumanoidRootPart.Position).Magnitude
-            if dist < 60 then
-                table.insert(mobs, mob)
-            end
-        end
-    end
-    return mobs
-end
-
-local function canAttackBF()
-    return tick() - lastAttackTime >= 0.3
-end
-
-local function attackWithPrimaryBF(target)
-    if not canAttackBF() then return end
-    lastAttackTime = tick()
-    
-    local char = LocalPlayer.Character
-    if not char then return end
-
-    if primaryWeapon == "Melee" then
-        -- Simulate mouse click for melee
-        if UserInputService.TouchEnabled then
-            UserInputService:SetMouseButtonPressed(Enum.UserInputType.MouseButton1)
-            task.wait(0.05)
-            UserInputService:SetMouseButtonReleased(Enum.UserInputType.MouseButton1)
-        else
-            local meleeRemote = ReplicatedStorage:FindFirstChild("MeleeAttack") or ReplicatedStorage:FindFirstChild("Melee")
-            if meleeRemote and meleeRemote:IsA("RemoteEvent") then
-                pcall(function() meleeRemote:FireServer() end)
-            end
-        end
-    elseif primaryWeapon == "Sword" then
-        -- Simulate mouse click for sword
-        if UserInputService.TouchEnabled then
-            UserInputService:SetMouseButtonPressed(Enum.UserInputType.MouseButton1)
-            task.wait(0.05)
-            UserInputService:SetMouseButtonReleased(Enum.UserInputType.MouseButton1)
-        else
-            local swordRemote = ReplicatedStorage:FindFirstChild("SwordAttack") or ReplicatedStorage:FindFirstChild("Sword")
-            if swordRemote and swordRemote:IsA("RemoteEvent") then
-                pcall(function() swordRemote:FireServer() end)
-            end
-        end
-    elseif primaryWeapon == "Fruit" then
-        -- Fruit attack (tool)
-        local fruitTool = char:FindFirstChildOfClass("Tool")
-        if fruitTool and fruitTool.Name:find("Fruit") then
-            if fruitTool:FindFirstChild("RemoteEvent") then
-                pcall(function() fruitTool.RemoteEvent:FireServer() end)
+-- Blox Fruits Tab
+B:CreateDropdown{ Name="Primary Weapon", Options={"Melee","Sword","Fruit"}, CurrentOption="Melee", Callback=function(o)
+    bfPrimary=o; Rayfield:Notify{Title="Blox Fruits",Content="Primary set to "..o,Duration=2}
+end}
+B:CreateToggle{ Name="Auto Farm", CurrentValue=false, Callback=function(v)
+    bfEnabled=v
+    if v then spawn(function()
+        while bfEnabled do
+            local lv=getLevel()
+            local qi=getQuestInfo(lv)
+            if not qi then
+                Rayfield:Notify{Title="Blox Fruits",Content="No quest for lvl "..lv,Duration=2}
+                task.wait(5)
             else
-                if UserInputService.TouchEnabled then
-                    UserInputService:SetMouseButtonPressed(Enum.UserInputType.MouseButton1)
-                    task.wait(0.05)
-                    UserInputService:SetMouseButtonReleased(Enum.UserInputType.MouseButton1)
-                end
-            end
-        end
-    end
-end
-
-local function killAuraBF(npc)
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    local mobs = findMobsForQuestBF(npc)
-    for _, mob in ipairs(mobs) do
-        if mob and mob:FindFirstChild("HumanoidRootPart") and mob.Humanoid.Health > 0 then
-            tweenToBF(mob.HumanoidRootPart.Position)
-            attackWithPrimaryBF(mob)
-            task.wait(0.3)
-        end
-    end
-end
-
-BloxFruitsTab:CreateDropdown({
-    Name = "Primary Weapon",
-    Options = {"Melee", "Sword", "Fruit"},
-    CurrentOption = "Melee",
-    Callback = function(option)
-        primaryWeapon = option
-        Rayfield:Notify({Title="Blox Fruits", Content="Primary Weapon set to "..option, Duration=2})
-    end
-})
-
-BloxFruitsTab:CreateToggle({
-    Name = "Auto Farm",
-    CurrentValue = false,
-    Callback = function(state)
-        autofarmEnabledBF = state
-        spawn(function()
-            while autofarmEnabledBF do
-                local level = getPlayerLevelBF()
-                local questInfo = getCurrentQuestInfoBF(level)
-                if not questInfo then
-                    Rayfield:Notify({Title="Blox Fruits", Content="No quest for level "..level, Duration=3})
-                    task.wait(5)
-                else
-                    tweenToBF(questInfo.islandPos)
-                    local npc = findNPCBF(questInfo.npcName)
-                    if npc then
-                        acceptQuestBF(npc)
-                        task.wait(2)
-                        while not isQuestCompleteBF(questInfo.questName) and autofarmEnabledBF do
-                            killAuraBF(npc)
-                            task.wait(0.3)
-                        end
-                        tweenToBF(questInfo.islandPos)
-                        task.wait(2)
-                    else
-                        Rayfield:Notify({Title="Blox Fruits", Content="Quest NPC "..questInfo.npcName.." not found.", Duration=3})
-                        task.wait(5)
+                tweenBF(qi.pos)
+                local npc=findNPC(qi.npc)
+                if npc then
+                    acceptQuest(npc); task.wait(2)
+                    while not completeQuest(qi.quest) and bfEnabled do
+                        bfKillAura(npc); task.wait(0.3)
                     end
+                    tweenBF(qi.pos); task.wait(2)
+                else
+                    Rayfield:Notify{Title="Blox Fruits",Content="Fail find NPC "..qi.npc,Duration=2}
+                    task.wait(5)
                 end
             end
-        end)
-    end
-})
+        end
+    end) end
+end}
 
--- END OF SCRIPT
+-- Notify user loaded
+Rayfield:Notify{Title="Nebula Hub",Content="Loaded Successfully!",Duration=3}

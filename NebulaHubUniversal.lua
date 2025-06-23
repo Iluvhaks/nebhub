@@ -150,25 +150,26 @@ FTAPTab:CreateToggle({ Name="Auto Delete Fling", CurrentValue=false, Callback=fu
     autoFTAPDelete=v
 end })
 
--- Fling on Grab Release + Auto Delete Fling
+-- Fixed Fling on Grab Release + Auto Delete Fling
 workspace.ChildAdded:Connect(function(obj)
-    if obj.Name=="GrabParts" and obj:FindFirstChild("GrabPart") then
-        local grabPart=obj.GrabPart
-        local weld=grabPart:FindFirstChildWhichIsA("WeldConstraint") or grabPart:FindFirstChildWhichIsA("Weld")
+    if obj.Name == "GrabParts" and obj:FindFirstChild("GrabPart") then
+        local grabPart = obj.GrabPart
+        local weld = grabPart:FindFirstChildWhichIsA("WeldConstraint") or grabPart:FindFirstChildWhichIsA("Weld")
         if antiGrabEnabled and weld then weld:Destroy() end
-        local part=weld and weld.Part1
+        local part = weld and weld.Part1
         obj:GetPropertyChangedSignal("Parent"):Connect(function()
             if not obj.Parent and flingEnabled and part then
-                local bv=Instance.new("BodyVelocity")
-                bv.MaxForce=Vector3.new(1e9,1e9,1e9)
-                bv.Velocity=Camera.CFrame.LookVector*25000
-                bv.Parent=part
-                Debris:AddItem(bv,0.4)
+                local bv = Instance.new("BodyVelocity")
+                bv.MaxForce = Vector3.new(1e9,1e9,1e9)
+                bv.Velocity = Camera.CFrame.LookVector * flingStrength
+                bv.Parent = part
+                Debris:AddItem(bv, 0.4)
                 if autoFTAPDelete then
-                    local character=part.Parent
-                    if character and character:FindFirstChildOfClass("Humanoid") then
-                        character:BreakJoints()
-                    end
+                    local bv2 = Instance.new("BodyVelocity")
+                    bv2.MaxForce = Vector3.new(1e9,1e9,1e9)
+                    bv2.Velocity = Camera.CFrame.LookVector * 25000
+                    bv2.Parent = part
+                    Debris:AddItem(bv2, 0.4)
                 end
             end
         end)

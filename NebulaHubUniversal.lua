@@ -1,5 +1,5 @@
 -- Nebula Hub Universal Full Script
--- All Tabs + FTAP Strength & Auto-Delete Fling + Fixed TSB Autofarm
+-- All Tabs + FTAP Strength & Fling + Fixed TSB Autofarm
 
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 if not Rayfield then return warn("Failed to load Rayfield UI.") end
@@ -25,7 +25,6 @@ local espObjects                         = {}
 local flingEnabled, flingStrength       = false, 350
 local antiGrabEnabled, spawnKillAll, flingAll = false, false, false
 local autofarmEnabled                    = false
-local autoFTAPDelete                     = false
 
 -- Utility: Mobile Virtual Input
 local function sendVirtualInput(key)
@@ -33,7 +32,9 @@ local function sendVirtualInput(key)
         if typeof(key) == "string" then
             UserInputService:SetKeyDown(Enum.KeyCode[key]); task.wait(0.1); UserInputService:SetKeyUp(Enum.KeyCode[key])
         elseif key == Enum.UserInputType.MouseButton1 then
-            UserInputService:SetMouseButtonPressed(Enum.UserInputType.MouseButton1); task.wait(0.1); UserInputService:SetMouseButtonReleased(Enum.UserInputType.MouseButton1)
+            UserInputService:SetMouseButtonPressed(Enum.UserInputType.MouseButton1)
+            task.wait(0.1)
+            UserInputService:SetMouseButtonReleased(Enum.UserInputType.MouseButton1)
         end
     end
 end
@@ -216,9 +217,8 @@ FTAPTab:CreateSlider({ Name="Fling Strength", Range={100,5000}, Increment=50, Cu
 FTAPTab:CreateToggle({ Name="AntiGrab", CurrentValue=antiGrabEnabled, Callback=function(v) antiGrabEnabled=v; Rayfield:Notify({Title="AntiGrab",Content=v and "Enabled" or "Disabled",Duration=2}) end })
 FTAPTab:CreateToggle({ Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback=function(v) spawnKillAll=v if v then spawn(function() while spawnKillAll do for _,plr in ipairs(Players:GetPlayers()) do if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then plr.Character.HumanoidRootPart.CFrame=CFrame.new(0,-500,0) end end task.wait(1) end end) end end })
 FTAPTab:CreateToggle({ Name="Fling All", CurrentValue=flingAll, Callback=function(v) flingAll=v if v then spawn(function() while flingAll do for _,plr in ipairs(Players:GetPlayers()) do if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then local hrp=plr.Character.HumanoidRootPart local root=LocalPlayer.Character.HumanoidRootPart for i=1,60 do root.CFrame=CFrame.new(hrp.Position)*CFrame.Angles(0,math.rad(i*6),0) task.wait(0.01) end end end task.wait(0.5) end end) end end })
-FTAPTab:CreateToggle({ Name="Auto Delete Fling", CurrentValue=false, Callback=function(v) autoFTAPDelete=v end })
 
--- Fixed Fling on Grab Release + Delete
+-- Fixed Fling on Grab Release
 local grabMap = {}
 workspace.ChildAdded:Connect(function(obj)
     if obj.Name == "GrabParts" and obj:FindFirstChild("GrabPart") then
@@ -232,23 +232,11 @@ workspace.ChildRemoved:Connect(function(obj)
     local part = grabMap[obj]
     grabMap[obj] = nil
     if part and flingEnabled then
-        -- Fling using slider
-        local bv1 = Instance.new("BodyVelocity")
-        bv1.MaxForce = Vector3.new(1e9,1e9,1e9)
-        bv1.Velocity = Camera.CFrame.LookVector * flingStrength
-        bv1.Parent = part
-        Debris:AddItem(bv1,0.4)
-        -- Auto Delete Fling fixed 25k studs
-        if autoFTAPDelete then
-            local bv2 = Instance.new("BodyVelocity")
-            bv2.MaxForce = Vector3.new(1e9,1e9,1e9)
-            bv2.Velocity = Camera.CFrame.LookVector * 25000
-            bv2.Parent = part
-            Debris:AddItem(bv2,0.4)
-            if part.Parent and part.Parent:FindFirstChildOfClass("Humanoid") then
-                part.Parent:BreakJoints()
-            end
-        end
+        local bv = Instance.new("BodyVelocity")
+        bv.MaxForce = Vector3.new(1e9,1e9,1e9)
+        bv.Velocity = Camera.CFrame.LookVector * flingStrength
+        bv.Parent = part
+        Debris:AddItem(bv,0.4)
     end
 end)
 

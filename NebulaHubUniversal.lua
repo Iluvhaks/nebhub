@@ -1,8 +1,13 @@
--- Nebula Hub Universal Full Script
--- All Tabs + FTAP Strength & Fling + Fixed TSB Autofarm
+-- Nebula Hub Universal Full Script (Fixed for GUI show)
 
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-if not Rayfield then return warn("Failed to load Rayfield UI.") end
+-- Load Rayfield UI safely
+local success, Rayfield = pcall(function()
+    return loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+end)
+if not success or not Rayfield then 
+    warn("Failed to load Rayfield UI.")
+    return
+end
 
 -- Services
 local Players           = game:GetService("Players")
@@ -14,6 +19,12 @@ local Debris            = game:GetService("Debris")
 local Camera            = workspace.CurrentCamera
 
 local LocalPlayer = Players.LocalPlayer
+
+-- Wait for character and HumanoidRootPart to load before continuing
+if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+    LocalPlayer.CharacterAdded:Wait()
+    repeat task.wait() until LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+end
 
 -- State Variables
 local clickTPOn, clickConn               = false, nil
@@ -39,7 +50,7 @@ local function sendVirtualInput(key)
     end
 end
 
--- UI
+-- Create Rayfield Window
 local Window = Rayfield:CreateWindow({
     Name = "Nebula Hub Universal",
     LoadingTitle = "Nebula Hub Universal",
@@ -297,7 +308,7 @@ BloxFruits:CreateLabel("Coming soon...")
 -- Notify Loaded
 Rayfield:Notify({Title="Nebula Hub Universal",Content="All tabs loaded!",Duration=3})
 
--- Cleanup ESP
+-- Cleanup ESP on game close
 game:BindToClose(function()
     for _,v in pairs(espObjects) do
         if v.box then v.box:Remove() end

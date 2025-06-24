@@ -1,6 +1,3 @@
--- Nebula Hub Universal Full Script (Fixed for GUI show)
-
--- Load Rayfield UI safely
 local success, Rayfield = pcall(function()
     return loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 end)

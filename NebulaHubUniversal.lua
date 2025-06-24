@@ -96,7 +96,9 @@ Utility:CreateToggle({ Name = "Infinite Jump", CurrentValue = false, Callback = 
 
 Utility:CreateSlider({ Name = "Walk Speed", Range = {16, 200}, CurrentValue = 16, Callback = function(v)
     local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if humanoid then humanoid.WalkSpeed = v end
+    if humanoid then
+        humanoid.WalkSpeed = v
+    end
 end })
 
 Utility:CreateSlider({ Name = "Jump Power", Range = {50, 300}, CurrentValue = 100, Callback = function(v)

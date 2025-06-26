@@ -73,7 +73,6 @@ local Exploits   = Window:CreateTab("⚠️ Exploits")
 local FTAPTab    = Window:CreateTab("👐 FTAP")
 local TSBTab     = Window:CreateTab("⚔️ TSB")
 local BloxFruits = Window:CreateTab("🍉 BloxFruits")
-local BABFT      = Window:CreateTab("⛵ BABFT")
 
 -- ===== Utility =====
 Utility:CreateButton({ Name = "Click TP", Callback = function()
@@ -332,52 +331,4 @@ end
 
 -- ===== Blox Fruits =====
 BloxFruits:CreateLabel("Coming Soon...")
-
--- ===== BABFT Autofarm =====
-local BABFTFarmRunning = false
-local AF_Height = 250
-local AF_Speed = 45
-
-BABFT:CreateSlider({ Name="Farm Height", Range={100,1000}, Increment=10, CurrentValue=AF_Height, Callback=function(v) AF_Height=v end })
-BABFT:CreateSlider({ Name="Farm Speed", Range={10,100}, Increment=5, CurrentValue=AF_Speed, Callback=function(v) AF_Speed=v end })
-BABFT:CreateToggle({ Name="Start Flying Autofarm", CurrentValue=false, Callback=function(v)
-    BABFTFarmRunning = v
-    if v then
-        spawn(function()
-            Rayfield:Notify({Title="BABFT",Content="Starting Autofarm",Duration=2})
-            while BABFTFarmRunning do
-                local stages = workspace:FindFirstChild("Stages")
-                if stages then
-                    local allStages = stages:GetChildren()
-                    table.sort(allStages, function(a,b) return a.Position.Z<b.Position.Z end)
-                    for _,stage in ipairs(allStages) do
-                        if not BABFTFarmRunning then break end
-                        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                        if hrp and stage:IsA("BasePart") then
-                            hrp.CFrame = CFrame.new(stage.Position + Vector3.new(0,AF_Height,0))
-                        end
-                        task.wait(1/AF_Speed)
-                    end
-                    local endZone = workspace:FindFirstChild("GoldenChest")
-                    if endZone and BABFTFarmRunning then
-                        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                        if hrp then hrp.CFrame = endZone.CFrame + Vector3.new(0,5,0) end
-                    end
-                end
-                task.wait(4)
-            end
-            Rayfield:Notify({Title="BABFT",Content="Autofarm Stopped",Duration=2})
-        end)
-    end
-end})
-BABFT:CreateButton({ Name="Teleport to End", Callback=function()
-    local endZone = workspace:FindFirstChild("GoldenChest")
-    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if endZone and hrp then
-        hrp.CFrame = endZone.CFrame + Vector3.new(0,5,0)
-        Rayfield:Notify({Title="BABFT",Content="Teleported to End",Duration=2})
-    end
-end })
-
--- Final Notify
-Rayfield:Notify({ Title="Nebula Hub Universal", Content="Loaded all tabs + BABFT", Duration=3 })
+end

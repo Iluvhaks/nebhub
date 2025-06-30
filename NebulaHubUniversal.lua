@@ -20,45 +20,38 @@ local Camera            = workspace.CurrentCamera
 
 local LocalPlayer = Players.LocalPlayer
 
--- Wait for character join
+-- Wait for character to load
 if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
     LocalPlayer.CharacterAdded:Wait()
     repeat task.wait() until LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 end
 
--- States and variables
-local clickTPOn, clickConn               = false, nil
-local ESPOn, LineESP, AimbotOn           = false, false, false
-local TeamCheck, AutoShoot               = true, false
-local AimFOV, TargetPart                 = 100, "Head"
-local InfJump, remLag                    = false, false
-local espObjects                         = {}
-local flingEnabled, flingStrength       = false, 350
-local antiGrabEnabled, spawnKillAll, flingAll = false, false, false
-local autofarmEnabled                    = false
-
--- New variables for Steal A Brainrot Tab
-local SABAutoStealEnabled                = false
-local noclipActive                      = false
-
--- Utility: Mobile input
-local function sendVirtualInput(key)
-    if UserInputService.TouchEnabled then
-        if typeof(key) == "string" then
-            UserInputService:SetKeyDown(Enum.KeyCode[key]); task.wait(0.1); UserInputService:SetKeyUp(Enum.KeyCode[key])
-        elseif key == Enum.UserInputType.MouseButton1 then
-            UserInputService:SetMouseButtonPressed(Enum.UserInputType.MouseButton1)
-            task.wait(0.1)
-            UserInputService:SetMouseButtonReleased(Enum.UserInputType.MouseButton1)
-        end
-    end
-end
-
--- Variables for WalkSpeed and JumpPower with defaults
+-- Variables
 local WalkSpeedValue = 16
 local JumpPowerValue = 100
+local InfJump = false
 
--- Rayfield setup
+local clickTPOn, clickConn = false, nil
+
+-- ESP & Visual
+local ESPOn, LineESP, AimbotOn = false, false, false
+local TeamCheck, AutoShoot = true, false
+local AimFOV = 100
+local TargetPart = "Head"
+local espObjects = {}
+
+-- Fling
+local flingEnabled, flingStrength = false, 350
+local antiGrabEnabled, spawnKillAll, flingAll = false, false, false
+
+-- Remote Lag
+local remLag = false
+
+-- Steal A Brainrot Variables
+local autoStealEnabled = false
+local noclipActive = false
+
+-- UI Setup
 local Window = Rayfield:CreateWindow({
     Name = "Nebula Hub Universal",
     LoadingTitle = "Nebula Hub Universal",
@@ -82,7 +75,10 @@ local TSBTab     = Window:CreateTab("⚔️ TSB")
 local BloxFruits = Window:CreateTab("🍉 BloxFruits")
 local SABTab     = Window:CreateTab("🧠 StealABrainrot")
 
--- Utility features
+-- ===========================
+-- Utility Tab
+-- ===========================
+
 Utility:CreateButton({ Name = "Click TP", Callback = function()
     clickTPOn = not clickTPOn
     if clickTPOn then
@@ -101,7 +97,7 @@ end })
 
 Utility:CreateToggle({ Name = "Infinite Jump", CurrentValue=false, Callback = function(v) InfJump = v end })
 
-local WalkSpeedSlider = Utility:CreateSlider({
+Utility:CreateSlider({
     Name = "Walk Speed",
     Range = {16, 200},
     CurrentValue = WalkSpeedValue,
@@ -117,7 +113,7 @@ local WalkSpeedSlider = Utility:CreateSlider({
     end
 })
 
-local JumpPowerSlider = Utility:CreateSlider({
+Utility:CreateSlider({
     Name = "Jump Power",
     Range = {50, 300},
     CurrentValue = JumpPowerValue,
@@ -155,7 +151,10 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Troll features
+-- ===========================
+-- Troll Tab
+-- ===========================
+
 Troll:CreateButton({ Name = "Fake Kick", Callback = function() LocalPlayer:Kick("Fake Kick - Nebula Hub Universal") end })
 Troll:CreateButton({ Name = "Chat Spam", Callback = function()
     spawn(function() while task.wait(0.25) do
@@ -171,7 +170,10 @@ Troll:CreateButton({ Name = "Fling Self", Callback = function()
     end
 end })
 
--- Auto features
+-- ===========================
+-- Auto Tab
+-- ===========================
+
 AutoTab:CreateButton({ Name = "Auto Move", Callback = function()
     _G.AutoMove = true
     spawn(function() while _G.AutoMove do
@@ -189,7 +191,10 @@ AutoTab:CreateButton({ Name = "Touch Everything", Callback = function()
     end
 end })
 
--- Remote Lag & Scan
+-- ===========================
+-- Remote Tab
+-- ===========================
+
 RemoteTab:CreateButton({ Name = "Toggle Remote Lag", Callback = function()
     remLag = not remLag
     Rayfield:Notify({Title = "Remote Lag", Content = remLag and "Enabled" or "Disabled", Duration = 2})
@@ -207,6 +212,7 @@ RemoteTab:CreateButton({ Name = "Toggle Remote Lag", Callback = function()
         end
     end) end
 end })
+
 RemoteTab:CreateButton({ Name = "Scan Remotes", Callback = function()
     for _, o in ipairs(workspace:GetDescendants()) do
         if o:IsA("RemoteEvent") or o:IsA("RemoteFunction") then
@@ -215,7 +221,10 @@ RemoteTab:CreateButton({ Name = "Scan Remotes", Callback = function()
     end
 end })
 
--- Visual (ESP/Aimbot)
+-- ===========================
+-- Visual Tab
+-- ===========================
+
 VisualTab:CreateToggle({ Name="ESP", CurrentValue=false, Callback=function(v) ESPOn=v end })
 VisualTab:CreateToggle({ Name="Line ESP", CurrentValue=false, Callback=function(v) LineESP=v end })
 VisualTab:CreateToggle({ Name="Aimbot", CurrentValue=false, Callback=function(v) AimbotOn=v end })
@@ -252,13 +261,27 @@ RunService.RenderStepped:Connect(function()
             end
             if AimbotOn and vis then
                 Camera.CFrame = CFrame.new(camPos, part.Position)
-                if AutoShoot then sendVirtualInput(Enum.UserInputType.MouseButton1) end
+                if AutoShoot then
+                    -- Simulate click on mobile or PC
+                    if UserInputService.TouchEnabled then
+                        UserInputService:SetMouseButtonPressed(Enum.UserInputType.MouseButton1)
+                        task.wait(0.05)
+                        UserInputService:SetMouseButtonReleased(Enum.UserInputType.MouseButton1)
+                    else
+                        mouse1press()
+                        task.wait(0.05)
+                        mouse1release()
+                    end
+                end
             end
         end
     end
 end)
 
--- Exploits
+-- ===========================
+-- Exploits Tab
+-- ===========================
+
 Exploits:CreateButton({ Name="Click Delete", Callback=function()
     local m = LocalPlayer:GetMouse()
     m.Button1Down:Connect(function()
@@ -268,7 +291,10 @@ Exploits:CreateButton({ Name="Click Delete", Callback=function()
     end)
 end })
 
--- FTAP Tab features (fling, antigrab, spawnkill)
+-- ===========================
+-- FTAP Tab
+-- ===========================
+
 FTAPTab:CreateToggle({ Name="Enable Fling", CurrentValue=flingEnabled, Callback=function(v) flingEnabled=v end })
 FTAPTab:CreateSlider({ Name="Fling Strength", Range={100,5000}, Increment=50, CurrentValue=flingStrength, Callback=function(v)
     flingStrength=v
@@ -329,49 +355,97 @@ do
     end)
 end
 
--- TSB features
-do
-    local TweenInfoTSB = TweenInfo.new(0.3, Enum.EasingStyle.Linear)
-    local TSBTargetPlayer=nil
-    local LowHP,RecoverHP,SafeFlyHeight,SafeFlySpeed = 0.35,0.55,1000,50
-    local SafeFly=false
+-- ===========================
+-- Steal A Brainrot Tab
+-- ===========================
 
-    local function enableSafeFly()
-        local hrp=LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local humanoid= LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hrp and humanoid then
-            SafeFly=true
-            humanoid.PlatformStand=true
-            hrp.Anchored=true
-            hrp.CFrame=hrp.CFrame+Vector3.new(0,SafeFlyHeight,0)
-            while SafeFly do
-                local dt=RunService.Heartbeat:Wait()
-                hrp.CFrame=hrp.CFrame+Vector3.new(0,SafeFlySpeed*dt,0)
-                if humanoid.Health/humanoid.MaxHealth>=RecoverHP then SafeFly=false end
+-- Anticheat Bypass Button
+SABTab:CreateButton({
+    Name = "Bypass Anticheat (Safe Mode)",
+    Callback = function()
+        local mt = getrawmetatable(game)
+        setreadonly(mt, false)
+        local oldNamecall = mt.__namecall
+        mt.__namecall = newcclosure(function(self, ...)
+            local args = {...}
+            local method = getnamecallmethod()
+            if (self:IsA("RemoteEvent") or self:IsA("RemoteFunction")) and tostring(self):lower():match("kick") then
+                return nil -- Block kick calls
             end
-            hrp.Anchored=false
-            humanoid.PlatformStand=false
+            if method == "Kick" then
+                return warn("Kick blocked by Nebula Hub.")
+            end
+            return oldNamecall(self, unpack(args))
+        end)
+        setreadonly(mt, true)
+        Rayfield:Notify({Title="Anticheat", Content="Bypass enabled (Safe Mode)", Duration=3})
+    end
+})
+
+-- Noclip Toggle
+SABTab:CreateToggle({
+    Name = "Enable Noclip",
+    CurrentValue = false,
+    Callback = function(value)
+        noclipActive = value
+        Rayfield:Notify({Title="Noclip", Content= value and "Enabled" or "Disabled", Duration=2})
+    end
+})
+
+RunService.Stepped:Connect(function()
+    if noclipActive and LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
         end
     end
+end)
 
-    local function autofarmTSB()
-        while autofarmEnabled do
-            local hrp=LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                if not TSBTargetPlayer or not TSBTargetPlayer.Character or TSBTargetPlayer.Character:FindFirstChildOfClass("Humanoid").Health<=0 then
-                    local dist,nearest=math.huge,nil
-                    for _,plr in ipairs(Players:GetPlayers()) do
-                        if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                            local h=plr.Character:FindFirstChildOfClass("Humanoid")
-                            if h and h.Health>0 then
-                                local d=(hrp.Position-plr.Character.HumanoidRootPart.Position).Magnitude
-                                if d<dist then dist,nearest=d,plr end
-                            end
+-- Auto Steal Brainrot Toggle
+SABTab:CreateToggle({
+    Name = "Auto Steal Brainrots",
+    CurrentValue = false,
+    Callback = function(value)
+        autoStealEnabled = value
+        Rayfield:Notify({Title="Auto Steal", Content= value and "Enabled" or "Disabled", Duration=2})
+        if value then
+            spawn(function()
+                while autoStealEnabled do
+                    local brainrots = {}
+                    for _, obj in pairs(workspace:GetDescendants()) do
+                        if obj.Name:lower():match("brainrot") and obj:IsA("BasePart") then
+                            table.insert(brainrots, obj)
                         end
                     end
-                    TSBTargetPlayer=nearest
+
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("HumanoidRootPart") then
+                        local hrp = char.HumanoidRootPart
+                        for _, brainrotPart in ipairs(brainrots) do
+                            -- Teleport close to brainrot part
+                            hrp.CFrame = brainrotPart.CFrame + Vector3.new(0, 3, 0)
+                            task.wait(0.3)
+                            -- Attempt touch
+                            if brainrotPart.Parent:FindFirstChild("TouchTransmitter") then
+                                firetouchinterest(hrp, brainrotPart.Parent, 0)
+                                firetouchinterest(hrp, brainrotPart.Parent, 1)
+                            end
+                            task.wait(1)
+                        end
+                    end
+                    task.wait(1)
                 end
-                if TSBTargetPlayer and TSBTargetPlayer.Character then
-                    local tHRP=TSBTargetPlayer.Character:FindFirstChild("HumanoidRootPart")
-                    if tHRP then
-                        local tween=TweenService:Create(hrp
+            end)
+        end
+    end
+})
+
+-- ===========================
+-- BloxFruits Tab (scaffold)
+-- ===========================
+
+BloxFruits:CreateLabel({ Name = "Coming Soon..." })
+
+-- Script end
+Rayfield:Notify({Title="Nebula Hub Universal", Content="Loaded with StealABrainrot Tab!", Duration=4})

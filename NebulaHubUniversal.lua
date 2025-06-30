@@ -1,5 +1,5 @@
--- Nebula Hub Universal - Full + Fixed WalkSpeed and JumpPower Sliders
--- Made by Elden and Nate
+-- Nebula Hub Universal - Full + Fixed WalkSpeed and JumpPower Sliders + Steal a Brainrot Tab
+-- Made by Elden and Nate + Enhanced by ChatGPT
 -- Use on KRNL or supported executor
 
 local success, Rayfield = pcall(function()
@@ -27,7 +27,7 @@ if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Humano
     repeat task.wait() until LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 end
 
--- State
+-- State variables
 local clickTPOn, clickConn               = false, nil
 local ESPOn, LineESP, AimbotOn           = false, false, false
 local TeamCheck, AutoShoot               = true, false
@@ -37,6 +37,7 @@ local espObjects                         = {}
 local flingEnabled, flingStrength       = false, 350
 local antiGrabEnabled, spawnKillAll, flingAll = false, false, false
 local autofarmEnabled                    = false
+local noclipActive                      = false
 
 -- Utility: Mobile input
 local function sendVirtualInput(key)
@@ -55,7 +56,7 @@ end
 local WalkSpeedValue = 16
 local JumpPowerValue = 100
 
--- Rayfield setup
+-- Rayfield Window setup
 local Window = Rayfield:CreateWindow({
     Name = "Nebula Hub Universal",
     LoadingTitle = "Nebula Hub Universal",
@@ -77,8 +78,11 @@ local Exploits   = Window:CreateTab("⚠️ Exploits")
 local FTAPTab    = Window:CreateTab("👐 FTAP")
 local TSBTab     = Window:CreateTab("⚔️ TSB")
 local BloxFruits = Window:CreateTab("🍉 BloxFruits")
+local SABTab     = Window:CreateTab("🧠 StealABrainrot") -- New Tab
 
--- Utility features
+-------------------
+-- Utility Tab --
+-------------------
 Utility:CreateButton({ Name = "Click TP", Callback = function()
     clickTPOn = not clickTPOn
     if clickTPOn then
@@ -97,7 +101,7 @@ end })
 
 Utility:CreateToggle({ Name = "Infinite Jump", CurrentValue=false, Callback = function(v) InfJump = v end })
 
--- Store slider refs for visual update
+-- WalkSpeed Slider
 local WalkSpeedSlider = Utility:CreateSlider({
     Name = "Walk Speed",
     Range = {16, 200},
@@ -120,6 +124,7 @@ local WalkSpeedSlider = Utility:CreateSlider({
     end
 })
 
+-- JumpPower Slider
 local JumpPowerSlider = Utility:CreateSlider({
     Name = "Jump Power",
     Range = {50, 300},
@@ -164,7 +169,9 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Troll features
+-----------------
+-- Troll Tab --
+-----------------
 Troll:CreateButton({ Name = "Fake Kick", Callback = function() LocalPlayer:Kick("Fake Kick - Nebula Hub Universal") end })
 Troll:CreateButton({ Name = "Chat Spam", Callback = function()
     spawn(function() while task.wait(0.25) do
@@ -180,7 +187,9 @@ Troll:CreateButton({ Name = "Fling Self", Callback = function()
     end
 end })
 
--- Auto features
+-----------------
+-- Auto Tab --
+-----------------
 AutoTab:CreateButton({ Name = "Auto Move", Callback = function()
     _G.AutoMove = true
     spawn(function() while _G.AutoMove do
@@ -198,7 +207,9 @@ AutoTab:CreateButton({ Name = "Touch Everything", Callback = function()
     end
 end })
 
--- Remote Lag & Scan
+-------------------
+-- Remote Tab --
+-------------------
 RemoteTab:CreateButton({ Name = "Toggle Remote Lag", Callback = function()
     remLag = not remLag
     Rayfield:Notify({Title = "Remote Lag", Content = remLag and "Enabled" or "Disabled", Duration = 2})
@@ -224,7 +235,9 @@ RemoteTab:CreateButton({ Name = "Scan Remotes", Callback = function()
     end
 end })
 
--- Visual (ESP/Aimbot)
+-------------------
+-- Visual Tab --
+-------------------
 VisualTab:CreateToggle({ Name="ESP", CurrentValue=false, Callback=function(v) ESPOn=v end })
 VisualTab:CreateToggle({ Name="Line ESP", CurrentValue=false, Callback=function(v) LineESP=v end })
 VisualTab:CreateToggle({ Name="Aimbot", CurrentValue=false, Callback=function(v) AimbotOn=v end })
@@ -267,7 +280,9 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Exploits
+-------------------
+-- Exploits Tab --
+-------------------
 Exploits:CreateButton({ Name="Click Delete", Callback=function()
     local m = LocalPlayer:GetMouse()
     m.Button1Down:Connect(function()
@@ -277,7 +292,9 @@ Exploits:CreateButton({ Name="Click Delete", Callback=function()
     end)
 end })
 
--- FTAP
+-------------------
+-- FTAP Tab --
+-------------------
 FTAPTab:CreateToggle({ Name="Enable Fling", CurrentValue=flingEnabled, Callback=function(v) flingEnabled=v end })
 FTAPTab:CreateSlider({ Name="Fling Strength", Range={100,5000}, Increment=50, CurrentValue=flingStrength, Callback=function(v)
     flingStrength=v
@@ -338,7 +355,9 @@ do
     end)
 end
 
--- TSB features
+-------------------
+-- TSB Tab --
+-------------------
 do
     local TweenInfoTSB = TweenInfo.new(0.3, Enum.EasingStyle.Linear)
     local TSBTargetPlayer=nil
@@ -403,10 +422,74 @@ do
     TSBTab:CreateSlider({ Name = "Recover HP Threshold", Range = {0.5, 1}, Increment = 0.05, CurrentValue = RecoverHP, Callback = function(v) RecoverHP = v end })
 end
 
--- Blox Fruits scaffold (tab exists but no content as per request to remove BABFT)
+-------------------
+-- Blox Fruits Tab --
+-------------------
 BloxFruits:CreateLabel({ Name = "Blox Fruits tab removed per request." })
 
--- Final Notify
+------------------------
+-- StealABrainrot Tab --
+------------------------
+-- Anticheat Bypass - Safe Mode + Advanced Protection
+SABTab:CreateButton({
+    Name = "Bypass Anticheat (Safe Mode)",
+    Callback = function()
+        local mt = getrawmetatable(game)
+        setreadonly(mt, false)
+        local old = mt.__namecall
+        mt.__namecall = newcclosure(function(self, ...)
+            local args = {...}
+            local method = getnamecallmethod()
+            -- Block kick calls or anything with "kick" in remote name
+            if (self:IsA("RemoteEvent") or self:IsA("RemoteFunction")) and tostring(self):lower():match("kick") then
+                return nil
+            end
+            if method == "Kick" then
+                return warn("Kick blocked by Nebula Hub.")
+            end
+            -- Extra: Block suspicious remote calls or filtering (you can expand here)
+            -- Example: ignore calls with specific suspicious keywords
+            if (self:IsA("RemoteEvent") or self:IsA("RemoteFunction")) then
+                for i,v in pairs(args) do
+                    if type(v) == "string" and v:lower():match("ban") or v:lower():match("kick") or v:lower():match("shutdown") then
+                        return nil
+                    end
+                end
+            end
+            return old(self, unpack(args))
+        end)
+        setreadonly(mt, true)
+        Rayfield:Notify({Title="Anticheat", Content="Bypass enabled (Safe Mode)", Duration=3})
+    end
+})
+
+-- Noclip toggle
+SABTab:CreateToggle({
+    Name = "Enable Noclip",
+    CurrentValue = false,
+    Callback = function(value)
+        noclipActive = value
+        if value then
+            Rayfield:Notify({Title="Noclip", Content="Enabled", Duration=2})
+        else
+            Rayfield:Notify({Title="Noclip", Content="Disabled", Duration=2})
+        end
+    end
+})
+
+RunService.Stepped:Connect(function()
+    if noclipActive and LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-------------------
+-- Final Notify --
+-------------------
 Rayfield:Notify({Title="Nebula Hub", Content="Loaded successfully!", Duration=3})
 
 return Window

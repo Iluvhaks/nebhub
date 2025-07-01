@@ -1,887 +1,557 @@
--- Nebula Hub Universal Full Organized Script-- Nebula Hub Universal - Full Integrated Version
--- Includes: TSB, FTAP, BloxFruits, SAB, AstraCloud, Full UI + Game Logic
+-- Nebula Hub Universal - Full + Fixed WalkSpeed and JumpPower Sliders + AstraCloud
+-- Made by Elden and Nate, integrated with Steal a Brainrot and AstraCloud tabs
 
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local Debris = game:GetService("Debris")
-local Camera = workspace.CurrentCamera
+local success, Rayfield = pcall(function()
+    return loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+end)
+if not success or not Rayfield then 
+    warn("Failed to load Rayfield UI.")
+    return
+end
+
+-- Services
+local Players           = game:GetService("Players")
+local RunService        = game:GetService("RunService")
+local TweenService      = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService  = game:GetService("UserInputService")
+local Debris            = game:GetService("Debris")
+local Camera            = workspace.CurrentCamera
+local StarterGui        = game:GetService("StarterGui")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Main GUI Setup
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "NebulaHubGUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = game.CoreGui
-
--- Main Frame
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 450, 0, 520)
-MainFrame.Position = UDim2.new(0.5, -225, 0.5, -260)
-MainFrame.BackgroundColor3 = Color3.fromRGB(55, 0, 88) -- Dark purple
-MainFrame.BorderSizePixel = 0
-MainFrame.Parent = ScreenGui
-MainFrame.Active = true
-MainFrame.Draggable = true
-
--- Title bar
-local TitleBar = Instance.new("Frame")
-TitleBar.Name = "TitleBar"
-TitleBar.Size = UDim2.new(1, 0, 0, 30)
-TitleBar.BackgroundColor3 = Color3.fromRGB(88, 44, 155) -- Purple
-TitleBar.BorderSizePixel = 0
-TitleBar.Parent = MainFrame
-
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Name = "TitleLabel"
-TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
-TitleLabel.Position = UDim2.new(0, 10, 0, 0)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Nebula Hub Universal"
-TitleLabel.TextColor3 = Color3.fromRGB(255, 215, 0) -- Gold
-TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.TextSize = 18
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-TitleLabel.Parent = TitleBar
-
--- Minimize Button (Line)
-local MinimizeButton = Instance.new("TextButton")
-MinimizeButton.Name = "MinimizeButton"
-MinimizeButton.Size = UDim2.new(0, 30, 1, 0)
-MinimizeButton.Position = UDim2.new(1, -60, 0, 0)
-MinimizeButton.BackgroundColor3 = Color3.fromRGB(88, 44, 155)
-MinimizeButton.BorderSizePixel = 0
-MinimizeButton.Text = "-"
-MinimizeButton.TextColor3 = Color3.fromRGB(255, 215, 0)
-MinimizeButton.Font = Enum.Font.GothamBold
-MinimizeButton.TextSize = 24
-MinimizeButton.Parent = TitleBar
-
--- Close Button (X)
-local CloseButton = Instance.new("TextButton")
-CloseButton.Name = "CloseButton"
-CloseButton.Size = UDim2.new(0, 30, 1, 0)
-CloseButton.Position = UDim2.new(1, -30, 0, 0)
-CloseButton.BackgroundColor3 = Color3.fromRGB(88, 44, 155)
-CloseButton.BorderSizePixel = 0
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(255, 215, 0)
-CloseButton.Font = Enum.Font.GothamBold
-CloseButton.TextSize = 20
-CloseButton.Parent = TitleBar
-
--- Tab Buttons Frame
-local TabsFrame = Instance.new("Frame")
-TabsFrame.Name = "TabsFrame"
-TabsFrame.Size = UDim2.new(0, 120, 1, -30)
-TabsFrame.Position = UDim2.new(0, 0, 0, 30)
-TabsFrame.BackgroundColor3 = Color3.fromRGB(44, 0, 66) -- Slightly darker purple
-TabsFrame.BorderSizePixel = 0
-TabsFrame.Parent = MainFrame
-
-local TabsLayout = Instance.new("UIListLayout")
-TabsLayout.FillDirection = Enum.FillDirection.Vertical
-TabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-TabsLayout.Padding = UDim.new(0, 5)
-TabsLayout.Parent = TabsFrame
-
--- Content Frame
-local TabContentFrame = Instance.new("Frame")
-TabContentFrame.Name = "TabContentFrame"
-TabContentFrame.Size = UDim2.new(1, -120, 1, -30)
-TabContentFrame.Position = UDim2.new(0, 120, 0, 30)
-TabContentFrame.BackgroundColor3 = Color3.fromRGB(40, 0, 70)
-TabContentFrame.BorderSizePixel = 0
-TabContentFrame.Parent = MainFrame
-
--- Minimized Bar
-local MinimizedBar = Instance.new("TextButton")
-MinimizedBar.Name = "MinimizedBar"
-MinimizedBar.Size = UDim2.new(0, 150, 0, 30)
-MinimizedBar.Position = UDim2.new(0.5, -75, 0, 20)
-MinimizedBar.BackgroundColor3 = Color3.fromRGB(88, 44, 155)
-MinimizedBar.BorderSizePixel = 0
-MinimizedBar.Text = "N"
-MinimizedBar.TextColor3 = Color3.fromRGB(255, 215, 0)
-MinimizedBar.Font = Enum.Font.GothamBlack
-MinimizedBar.TextSize = 28
-MinimizedBar.Visible = false
-MinimizedBar.Parent = ScreenGui
-MinimizedBar.Active = true
-MinimizedBar.Draggable = true
-
--- Helper functions to create UI components
-local function createButton(text, parent, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -20, 0, 30)
-    btn.BackgroundColor3 = Color3.fromRGB(128, 0, 255)
-    btn.BorderSizePixel = 0
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 16
-    btn.Text = text
-    btn.Parent = parent
-    btn.MouseButton1Click:Connect(callback)
-    return btn
+-- Wait for character join
+if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+    LocalPlayer.CharacterAdded:Wait()
+    repeat task.wait() until LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 end
 
-local function createToggle(text, parent, default, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -20, 0, 30)
-    frame.BackgroundTransparency = 1
-    frame.Parent = parent
+-- States
+local clickTPOn, clickConn               = false, nil
+local ESPOn, LineESP, AimbotOn           = false, false, false
+local TeamCheck, AutoShoot               = true, false
+local AimFOV, TargetPart                 = 100, "Head"
+local InfJump, remLag                    = false, false
+local espObjects                         = {}
+local flingEnabled, flingStrength       = false, 350
+local antiGrabEnabled, spawnKillAll, flingAll = false, false, false
+local autofarmEnabled                    = false
 
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.7, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = Color3.new(1,1,1)
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 16
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = frame
+-- WalkSpeed and JumpPower defaults
+local WalkSpeedValue = 16
+local JumpPowerValue = 100
 
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, 40, 0, 20)
-    toggleBtn.Position = UDim2.new(0.75, 0, 0.2, 0)
-    toggleBtn.BackgroundColor3 = default and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(60, 0, 90)
-    toggleBtn.Text = default and "ON" or "OFF"
-    toggleBtn.TextColor3 = Color3.fromRGB(0,0,0)
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.TextSize = 14
-    toggleBtn.Parent = frame
+-- Rayfield UI Setup
+local Window = Rayfield:CreateWindow({
+    Name = "Nebula Hub Universal",
+    LoadingTitle = "Nebula Hub Universal",
+    SubText = "Made by Elden and Nate",
+    Theme = "Default",
+    ToggleUIKeybind = Enum.KeyCode.K,
+    ConfigurationSaving = { Enabled = true, FileName = "NebulaHubUniversal" },
+    Discord = { Enabled = true, Invite = "yTxgQcTUw4", RememberJoins = true },
+    KeySystem = false
+})
 
-    local toggled = default
+-- Tabs
+local Utility    = Window:CreateTab("🧠 Utility")
+local Troll      = Window:CreateTab("💣 Troll")
+local AutoTab    = Window:CreateTab("🤖 Auto")
+local RemoteTab  = Window:CreateTab("📡 Remotes")
+local VisualTab  = Window:CreateTab("🎯 Visual")
+local Exploits   = Window:CreateTab("⚠️ Exploits")
+local FTAPTab    = Window:CreateTab("👐 FTAP")
+local TSBTab     = Window:CreateTab("⚔️ TSB")
+local BloxFruits = Window:CreateTab("🍉 BloxFruits")
+local SABTab     = Window:CreateTab("🧠 StealABrainrot")
+local AstraCloud = Window:CreateTab("☁️ AstraCloud")
 
-    local function updateState()
-        toggleBtn.BackgroundColor3 = toggled and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(60, 0, 90)
-        toggleBtn.Text = toggled and "ON" or "OFF"
-        toggleBtn.TextColor3 = toggled and Color3.fromRGB(0,0,0) or Color3.fromRGB(255, 255, 255)
-    end
-
-    toggleBtn.MouseButton1Click:Connect(function()
-        toggled = not toggled
-        updateState()
-        callback(toggled)
-    end)
-
-    return frame, function() return toggled end
-end
-
-local function createSlider(text, parent, min, max, default, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -20, 0, 40)
-    frame.BackgroundTransparency = 1
-    frame.Parent = parent
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 0, 20)
-    label.BackgroundTransparency = 1
-    label.Text = text.." : "..tostring(default)
-    label.TextColor3 = Color3.new(1,1,1)
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 14
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = frame
-
-    local sliderFrame = Instance.new("Frame")
-    sliderFrame.Size = UDim2.new(1, 0, 0, 15)
-    sliderFrame.Position = UDim2.new(0, 0, 0, 25)
-    sliderFrame.BackgroundColor3 = Color3.fromRGB(60, 0, 90)
-    sliderFrame.Parent = frame
-
-    local sliderFill = Instance.new("Frame")
-    sliderFill.Size = UDim2.new((default - min)/(max - min), 0, 1, 0)
-    sliderFill.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-    sliderFill.Parent = sliderFrame
-
-    local sliderBtn = Instance.new("TextButton")
-    sliderBtn.Size = UDim2.new(0, 10, 1, 0)
-    sliderBtn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-    sliderBtn.BorderSizePixel = 0
-    sliderBtn.Position = UDim2.new((default - min)/(max - min), 0, 0, 0)
-    sliderBtn.Parent = sliderFrame
-    sliderBtn.AutoButtonColor = false
-
-    local dragging = false
-
-    sliderBtn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-        end
-    end)
-
-    sliderBtn.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-
-    sliderFrame.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local relativePos = math.clamp((input.Position.X - sliderFrame.AbsolutePosition.X) / sliderFrame.AbsoluteSize.X, 0, 1)
-            sliderFill.Size = UDim2.new(relativePos, 0, 1, 0)
-            sliderBtn.Position = UDim2.new(relativePos, 0, 0, 0)
-            local val = math.floor(min + (max - min) * relativePos + 0.5)
-            label.Text = text.." : "..val
-            callback(val)
-        end
-    end)
-
-    return frame
-end
-
-local function createDropdown(text, parent, options, default, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -20, 0, 30)
-    frame.BackgroundTransparency = 1
-    frame.Parent = parent
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.7, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = Color3.new(1,1,1)
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 16
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = frame
-
-    local dropdownBtn = Instance.new("TextButton")
-    dropdownBtn.Size = UDim2.new(0, 90, 1, 0)
-    dropdownBtn.Position = UDim2.new(0.75, 0, 0, 0)
-    dropdownBtn.BackgroundColor3 = Color3.fromRGB(60, 0, 90)
-    dropdownBtn.TextColor3 = Color3.new(1,1,1)
-    dropdownBtn.Font = Enum.Font.GothamBold
-    dropdownBtn.TextSize = 14
-    dropdownBtn.Text = default
-    dropdownBtn.Parent = frame
-
-    local optionsFrame = Instance.new("Frame")
-    optionsFrame.Size = UDim2.new(0, 90, 0, #options * 20)
-    optionsFrame.Position = UDim2.new(0.75, 0, 1, 0)
-    optionsFrame.BackgroundColor3 = Color3.fromRGB(60, 0, 90)
-    optionsFrame.Visible = false
-    optionsFrame.Parent = frame
-
-    local optionsLayout = Instance.new("UIListLayout")
-    optionsLayout.Parent = optionsFrame
-
-    for i, opt in ipairs(options) do
-        local optBtn = Instance.new("TextButton")
-        optBtn.Size = UDim2.new(1, 0, 0, 20)
-        optBtn.BackgroundColor3 = Color3.fromRGB(80, 10, 120)
-        optBtn.BorderSizePixel = 0
-        optBtn.TextColor3 = Color3.new(1,1,1)
-        optBtn.Font = Enum.Font.Gotham
-        optBtn.TextSize = 14
-        optBtn.Text = opt
-        optBtn.Parent = optionsFrame
-
-        optBtn.MouseButton1Click:Connect(function()
-            dropdownBtn.Text = opt
-            optionsFrame.Visible = false
-            callback(opt)
-        end)
-    end
-
-    dropdownBtn.MouseButton1Click:Connect(function()
-        optionsFrame.Visible = not optionsFrame.Visible
-    end)
-
-    return frame
-end
-
--- State variables for toggles/sliders
-local states = {
-    clickTPOn = false,
-    InfJump = false,
-    WalkSpeedValue = 16,
-    JumpPowerValue = 50,
-    flingEnabled = false,
-    flingStrength = 250,
-    antiGrabEnabled = false,
-    spawnKillAll = false,
-    flingAll = false,
-    autofarmEnabled = false,
-    AutoShoot = false,
-    TeamCheck = true,
-    TargetPart = "Head",
-    AimFOV = 90,
-    ESPOn = false,
-    LineESP = false,
-    AimbotOn = false,
-    noclipActive = false,
-    sabActive = false,
-    anticheatBypassActive = false,
-    godmodeActive = false,
-    unlimitedZoom = false,
-    grabbedPlayer = nil,
-}
-
--- Store esp objects
-local espObjects = {}
-
--- Tab buttons and content handlers
-local tabs = {
-    "🏠 Utility",
-    "💣 Troll",
-    "🤖 Auto",
-    "📡 Remotes",
-    "🎯 Visual",
-    "⚠️ Exploits",
-    "👐 FTAP",
-    "⚔️ TSB",
-    "🍉 BloxFruits",
-    "🧠 StealABrainrot",
-    "☁️ AstraCloud",
-}
-
-local tabButtons = {}
-local tabPages = {}
-
--- Clear all children in tab content frame
-local function clearTabContent()
-    for _, child in pairs(TabContentFrame:GetChildren()) do
-        if not child:IsA("UIListLayout") then
-            child:Destroy()
-        end
-    end
-end
-
--- Create Tab Buttons
-for i, tabName in ipairs(tabs) do
-    local btn = Instance.new("TextButton")
-    btn.Name = "TabButton_"..i
-    btn.Size = UDim2.new(1, -10, 0, 30)
-    btn.BackgroundColor3 = Color3.fromRGB(88, 44, 155)
-    btn.BorderSizePixel = 0
-    btn.TextColor3 = Color3.fromRGB(255, 215, 0)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 16
-    btn.Text = tabName
-    btn.Parent = TabsFrame
-    tabButtons[tabName] = btn
-
-    btn.MouseButton1Click:Connect(function()
-        clearTabContent()
-        tabPages[tabName]()
-        -- Highlight active tab
-        for _, b in pairs(tabButtons) do
-            b.BackgroundColor3 = Color3.fromRGB(88, 44, 155)
-        end
-        btn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-    end)
-end
-
--- ========== Tab Logic Functions ==========
-
+-------------------------
 -- Utility Tab
-tabPages["🏠 Utility"] = function()
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, 0, 1, 0)
-    container.BackgroundTransparency = 1
-    container.Parent = TabContentFrame
-    local layout = Instance.new("UIListLayout")
-    layout.Parent = container
-    layout.Padding = UDim.new(0, 8)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
+-------------------------
+Utility:CreateButton({ Name = "Click TP", Callback = function()
+    clickTPOn = not clickTPOn
+    if clickTPOn then
+        clickConn = LocalPlayer:GetMouse().Button1Down:Connect(function()
+            local m = LocalPlayer:GetMouse()
+            if m.Target then 
+                LocalPlayer.Character:MoveTo(m.Hit.p + Vector3.new(0,3,0)) 
+            end
+        end)
+        Rayfield:Notify({Title="Click TP", Content="Enabled", Duration=2})
+    else
+        if clickConn then clickConn:Disconnect() clickConn = nil end
+        Rayfield:Notify({Title="Click TP", Content="Disabled", Duration=2})
+    end
+end })
 
-    -- Click Teleport Toggle
-    createToggle("Click Teleport", container, states.clickTPOn, function(toggled)
-        states.clickTPOn = toggled
-    end)
+Utility:CreateToggle({ Name = "Infinite Jump", CurrentValue=false, Callback = function(v) InfJump = v end })
 
-    -- Infinite Jump Toggle
-    createToggle("Infinite Jump", container, states.InfJump, function(toggled)
-        states.InfJump = toggled
-    end)
-
-    -- WalkSpeed Slider
-    createSlider("WalkSpeed", container, 16, 100, states.WalkSpeedValue, function(value)
-        states.WalkSpeedValue = value
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid.WalkSpeed = value
+local WalkSpeedSlider = Utility:CreateSlider({
+    Name = "Walk Speed",
+    Range = {16, 200},
+    CurrentValue = WalkSpeedValue,
+    Callback = function(v)
+        WalkSpeedValue = v
+        if WalkSpeedSlider.SetValue then
+            WalkSpeedSlider:SetValue(v)
+        else
+            WalkSpeedSlider.CurrentValue = v
         end
-    end)
-
-    -- JumpPower Slider
-    createSlider("JumpPower", container, 50, 250, states.JumpPowerValue, function(value)
-        states.JumpPowerValue = value
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid.JumpPower = value
+        local char = LocalPlayer.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = WalkSpeedValue
+            end
         end
-    end)
+    end
+})
 
-    -- Noclip Toggle
-    createToggle("Noclip", container, states.noclipActive, function(toggled)
-        states.noclipActive = toggled
-    end)
-
-    -- ESP Toggle
-    createToggle("ESP", container, states.ESPOn, function(toggled)
-        states.ESPOn = toggled
-    end)
-
-    -- Line ESP Toggle
-    createToggle("Line ESP", container, states.LineESP, function(toggled)
-        states.LineESP = toggled
-    end)
-end
-
--- Troll Tab
-tabPages["💣 Troll"] = function()
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, 0, 1, 0)
-    container.BackgroundTransparency = 1
-    container.Parent = TabContentFrame
-    local layout = Instance.new("UIListLayout")
-    layout.Parent = container
-    layout.Padding = UDim.new(0, 8)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-    createToggle("Anti Grab", container, states.antiGrabEnabled, function(toggled)
-        states.antiGrabEnabled = toggled
-    end)
-
-    createToggle("Spawn Kill All", container, states.spawnKillAll, function(toggled)
-        states.spawnKillAll = toggled
-    end)
-
-    createToggle("Fling All", container, states.flingAll, function(toggled)
-        states.flingAll = toggled
-    end)
-
-    createSlider("Fling Strength", container, 100, 500, states.flingStrength, function(value)
-        states.flingStrength = value
-    end)
-end
-
--- Auto Tab
-tabPages["🤖 Auto"] = function()
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, 0, 1, 0)
-    container.BackgroundTransparency = 1
-    container.Parent = TabContentFrame
-    local layout = Instance.new("UIListLayout")
-    layout.Parent = container
-    layout.Padding = UDim.new(0, 8)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-    createToggle("Autofarm TSB", container, states.autofarmEnabled, function(toggled)
-        states.autofarmEnabled = toggled
-    end)
-
-    createToggle("Auto Shoot", container, states.AutoShoot, function(toggled)
-        states.AutoShoot = toggled
-    end)
-
-    createToggle("Team Check", container, states.TeamCheck, function(toggled)
-        states.TeamCheck = toggled
-    end)
-
-    createDropdown("Target Part", container, {"Head", "HumanoidRootPart"}, states.TargetPart, function(value)
-        states.TargetPart = value
-    end)
-
-    createSlider("Aim FOV", container, 10, 180, states.AimFOV, function(value)
-        states.AimFOV = value
-    end)
-end
-
--- Remotes Tab (example placeholder)
-tabPages["📡 Remotes"] = function()
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, 0, 1, 0)
-    container.BackgroundTransparency = 1
-    container.Parent = TabContentFrame
-    local layout = Instance.new("UIListLayout")
-    layout.Parent = container
-    layout.Padding = UDim.new(0, 8)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-    createButton("Dump Remotes", container, function()
-        print("Dumping remotes... (placeholder)")
-    end)
-end
-
--- Visual Tab
-tabPages["🎯 Visual"] = function()
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, 0, 1, 0)
-    container.BackgroundTransparency = 1
-    container.Parent = TabContentFrame
-    local layout = Instance.new("UIListLayout")
-    layout.Parent = container
-    layout.Padding = UDim.new(0, 8)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-    createToggle("ESP", container, states.ESPOn, function(toggled)
-        states.ESPOn = toggled
-    end)
-
-    createToggle("Line ESP", container, states.LineESP, function(toggled)
-        states.LineESP = toggled
-    end)
-end
-
--- Exploits Tab
-tabPages["⚠️ Exploits"] = function()
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, 0, 1, 0)
-    container.BackgroundTransparency = 1
-    container.Parent = TabContentFrame
-    local layout = Instance.new("UIListLayout")
-    layout.Parent = container
-    layout.Padding = UDim.new(0, 8)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-    createToggle("Infinite Jump", container, states.InfJump, function(toggled)
-        states.InfJump = toggled
-    end)
-
-    createToggle("Noclip", container, states.noclipActive, function(toggled)
-        states.noclipActive = toggled
-    end)
-
-    createToggle("Godmode", container, states.godmodeActive, function(toggled)
-        states.godmodeActive = toggled
-    end)
-
-    createToggle("Unlimited Zoom", container, states.unlimitedZoom, function(toggled)
-        states.unlimitedZoom = toggled
-    end)
-end
-
--- FTAP Tab (Grab & Fling)
-tabPages["👐 FTAP"] = function()
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, 0, 1, 0)
-    container.BackgroundTransparency = 1
-    container.Parent = TabContentFrame
-    local layout = Instance.new("UIListLayout")
-    layout.Parent = container
-    layout.Padding = UDim.new(0, 8)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-    createToggle("Enable Grab & Fling", container, states.flingEnabled, function(toggled)
-        states.flingEnabled = toggled
-    end)
-
-    createSlider("Fling Strength", container, 100, 500, states.flingStrength, function(value)
-        states.flingStrength = value
-    end)
-end
-
--- TSB Tab (The Strongest Battlegrounds Autofarm + Aimbot)
-tabPages["⚔️ TSB"] = function()
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, 0, 1, 0)
-    container.BackgroundTransparency = 1
-    container.Parent = TabContentFrame
-    local layout = Instance.new("UIListLayout")
-    layout.Parent = container
-    layout.Padding = UDim.new(0, 8)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-    createToggle("Autofarm", container, states.autofarmEnabled, function(toggled)
-        states.autofarmEnabled = toggled
-    end)
-
-    createToggle("Aimbot", container, states.AimbotOn, function(toggled)
-        states.AimbotOn = toggled
-    end)
-
-    createDropdown("Target Part", container, {"Head", "HumanoidRootPart"}, states.TargetPart, function(value)
-        states.TargetPart = value
-    end)
-
-    createSlider("Aim FOV", container, 10, 180, states.AimFOV, function(value)
-        states.AimFOV = value
-    end)
-end
-
--- BloxFruits Tab (Basic autofarm + speed)
-tabPages["🍉 BloxFruits"] = function()
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, 0, 1, 0)
-    container.BackgroundTransparency = 1
-    container.Parent = TabContentFrame
-    local layout = Instance.new("UIListLayout")
-    layout.Parent = container
-    layout.Padding = UDim.new(0, 8)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-    createToggle("Autofarm", container, false, function(toggled)
-        states.bloxAutofarm = toggled
-    end)
-
-    createSlider("WalkSpeed", container, 16, 100, 16, function(value)
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid.WalkSpeed = value
+local JumpPowerSlider = Utility:CreateSlider({
+    Name = "Jump Power",
+    Range = {50, 300},
+    CurrentValue = JumpPowerValue,
+    Callback = function(v)
+        JumpPowerValue = v
+        if JumpPowerSlider.SetValue then
+            JumpPowerSlider:SetValue(v)
+        else
+            JumpPowerSlider.CurrentValue = v
         end
-    end)
-end
-
--- Steal A Brainrot Tab
-tabPages["🧠 StealABrainrot"] = function()
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, 0, 1, 0)
-    container.BackgroundTransparency = 1
-    container.Parent = TabContentFrame
-    local layout = Instance.new("UIListLayout")
-    layout.Parent = container
-    layout.Padding = UDim.new(0, 8)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-    createToggle("Enable Anticheat Bypass", container, states.sabActive, function(toggled)
-        states.sabActive = toggled
-    end)
-
-    createButton("Run SAB Script", container, function()
-        -- Place your actual SAB loadstring or logic here
-        print("Running SAB script...")
-    end)
-end
-
--- AstraCloud Tab (Admin detection, anticheat bypass, godmode, server crasher, etc)
-tabPages["☁️ AstraCloud"] = function()
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, 0, 1, 0)
-    container.BackgroundTransparency = 1
-    container.Parent = TabContentFrame
-    local layout = Instance.new("UIListLayout")
-    layout.Parent = container
-    layout.Padding = UDim.new(0, 8)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-    createToggle("Anticheat Bypass", container, states.anticheatBypassActive, function(toggled)
-        states.anticheatBypassActive = toggled
-    end)
-
-    createToggle("Godmode", container, states.godmodeActive, function(toggled)
-        states.godmodeActive = toggled
-    end)
-
-    createToggle("Unlimited Zoom", container, states.unlimitedZoom, function(toggled)
-        states.unlimitedZoom = toggled
-    end)
-
-    createButton("Server Crasher", container, function()
-        -- Heavy flooding example
-        print("Server Crasher activated!")
-    end)
-
-    createButton("Command Logger", container, function()
-        print("Command Logger activated!")
-    end)
-
-    createButton("Script Injector Detection", container, function()
-        print("Script Injector Detection activated!")
-    end)
-end
-
--- ========== Functionality Implementation ==========
-
--- Teleport on click
-local mouse = LocalPlayer:GetMouse()
-mouse.Button1Down:Connect(function()
-    if states.clickTPOn then
-        local mousePos = mouse.Hit.p
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(mousePos + Vector3.new(0, 3, 0))
+        local char = LocalPlayer.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.UseJumpPower = true
+                humanoid.JumpPower = JumpPowerValue
+            end
         end
+    end
+})
+
+Utility:CreateButton({ Name = "Anti-AFK", Callback = function()
+    for _, conn in pairs(getconnections(LocalPlayer.Idled)) do conn:Disable() end
+end })
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    local humanoid = char:WaitForChild("Humanoid", 10)
+    if humanoid then
+        humanoid.WalkSpeed = WalkSpeedValue
+        humanoid.UseJumpPower = true
+        humanoid.JumpPower = JumpPowerValue
     end
 end)
 
--- Infinite jump
 UserInputService.JumpRequest:Connect(function()
-    if states.InfJump then
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
+    if InfJump and LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end
     end
 end)
 
--- Noclip
-RunService.Stepped:Connect(function()
-    if states.noclipActive and LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") and part.CanCollide == true then
-                part.CanCollide = false
-            end
-        end
-    elseif LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") and part.CanCollide == false then
-                part.CanCollide = true
-            end
+-------------------------
+-- Troll Tab
+-------------------------
+Troll:CreateButton({ Name = "Fake Kick", Callback = function() LocalPlayer:Kick("Fake Kick - Nebula Hub Universal") end })
+Troll:CreateButton({ Name = "Chat Spam", Callback = function()
+    spawn(function() while task.wait(0.25) do
+        pcall(function() ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer("Nebula Hub OP!","All") end)
+    end end)
+end })
+Troll:CreateButton({ Name = "Fling Self", Callback = function()
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        local bv = Instance.new("BodyVelocity", hrp)
+        bv.Velocity, bv.MaxForce = Vector3.new(9999,9999,9999), Vector3.new(math.huge,math.huge,math.huge)
+        task.wait(0.5); bv:Destroy()
+    end
+end })
+
+-------------------------
+-- Auto Tab
+-------------------------
+AutoTab:CreateButton({ Name = "Auto Move", Callback = function()
+    _G.AutoMove = true
+    spawn(function() while _G.AutoMove do
+        if LocalPlayer.Character then LocalPlayer.Character:MoveTo(Vector3.new(math.random(-100,100),10,math.random(-100,100))) end
+        task.wait(0.8)
+    end end)
+end })
+AutoTab:CreateButton({ Name = "Touch Everything", Callback = function()
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    for _, p in ipairs(workspace:GetDescendants()) do
+        if p:IsA("TouchTransmitter") and hrp then
+            firetouchinterest(hrp, p.Parent, 0)
+            firetouchinterest(hrp, p.Parent, 1)
         end
     end
-end)
+end })
 
--- ESP & Line ESP
-local function createHighlight(target)
-    local highlight = Instance.new("Highlight")
-    highlight.Adornee = target
-    highlight.FillColor = Color3.fromRGB(255, 215, 0)
-    highlight.FillTransparency = 0.6
-    highlight.OutlineColor = Color3.fromRGB(255, 215, 0)
-    highlight.Parent = target
-    return highlight
-end
+-------------------------
+-- Remote Tab
+-------------------------
+RemoteTab:CreateButton({ Name = "Toggle Remote Lag", Callback = function()
+    remLag = not remLag
+    Rayfield:Notify({Title = "Remote Lag", Content = remLag and "Enabled" or "Disabled", Duration = 2})
+    if remLag then spawn(function()
+        while remLag do
+            for _, o in ipairs(workspace:GetDescendants()) do
+                if o:IsA("RemoteEvent") or o:IsA("RemoteFunction") then
+                    pcall(function()
+                        if o:IsA("RemoteEvent") then o:FireServer("NebulaSpam")
+                        else o:InvokeServer("NebulaSpam") end
+                    end)
+                end
+            end
+            task.wait(0.05)
+        end
+    end) end
+end })
+RemoteTab:CreateButton({ Name = "Scan Remotes", Callback = function()
+    for _, o in ipairs(workspace:GetDescendants()) do
+        if o:IsA("RemoteEvent") or o:IsA("RemoteFunction") then
+            print("[Remote] "..o:GetFullName())
+        end
+    end
+end })
 
-RunService.Heartbeat:Connect(function()
-    if states.ESPOn then
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                if not espObjects[player.Name] then
-                    espObjects[player.Name] = createHighlight(player.Character)
+-------------------------
+-- Visual Tab
+-------------------------
+VisualTab:CreateToggle({ Name="ESP", CurrentValue=false, Callback=function(v) ESPOn=v end })
+VisualTab:CreateToggle({ Name="Line ESP", CurrentValue=false, Callback=function(v) LineESP=v end })
+VisualTab:CreateToggle({ Name="Aimbot", CurrentValue=false, Callback=function(v) AimbotOn=v end })
+VisualTab:CreateToggle({ Name="Team Check", CurrentValue=true, Callback=function(v) TeamCheck=v end })
+VisualTab:CreateToggle({ Name="AutoShoot", CurrentValue=false, Callback=function(v) AutoShoot=v end })
+VisualTab:CreateDropdown({ Name="Target Part", Options={"Head","HumanoidRootPart","Torso"}, CurrentOption="Head", Callback=function(v) TargetPart=v end })
+VisualTab:CreateSlider({ Name="FOV", Range={50,300}, CurrentValue=100, Callback=function(v) AimFOV=v end })
+
+RunService.RenderStepped:Connect(function()
+    local camPos = Camera.CFrame.Position
+    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p~=LocalPlayer and p.Character and p.Character:FindFirstChild(TargetPart) then
+            if TeamCheck and p.Team==LocalPlayer.Team then continue end
+            local part = p.Character[TargetPart]
+            local pos,on = Camera:WorldToViewportPoint(part.Position)
+            local dist = (part.Position-camPos).Magnitude
+            local rp = RaycastParams.new()
+            rp.FilterDescendantsInstances, rp.FilterType = {LocalPlayer.Character}, Enum.RaycastFilterType.Blacklist
+            local hit = workspace:Raycast(camPos, part.Position-camPos, rp)
+            local vis = hit and hit.Instance:IsDescendantOf(p.Character)
+            if ESPOn and on and vis then
+                if not espObjects[p] then espObjects[p]={box=Drawing.new("Square"),line=Drawing.new("Line")} end
+                local d = espObjects[p]
+                local size = math.clamp(2000/dist,20,200)
+                d.box.Visible=true; d.box.Color=Color3.new(1,0,0); d.box.Thickness=2
+                d.box.Size=Vector2.new(size,size); d.box.Position=Vector2.new(pos.X,pos.Y)-d.box.Size/2
+                d.line.Visible=LineESP and true or false
+                if LineESP then d.line.From=center; d.line.To=Vector2.new(pos.X,pos.Y)
+                    d.line.Color=Color3.new(1,0,0); d.line.Thickness=1
+                end
+            elseif espObjects[p] then
+                espObjects[p].box:Remove(); espObjects[p].line:Remove(); espObjects[p]=nil
+            end
+            if AimbotOn and vis then
+                Camera.CFrame = CFrame.new(camPos, part.Position)
+                if AutoShoot then UserInputService:SetMouseButtonPressed(Enum.UserInputType.MouseButton1)
+                    task.wait(0.1)
+                    UserInputService:SetMouseButtonReleased(Enum.UserInputType.MouseButton1)
                 end
             end
         end
-    else
-        for _, obj in pairs(espObjects) do
-            if obj and obj.Parent then
-                obj:Destroy()
-            end
-        end
-        espObjects = {}
     end
 end)
 
--- Autofarm + Aimbot for TSB example
-local function isEnemy(player)
-    if not states.TeamCheck then
-        return true
-    end
-    if LocalPlayer.Team and player.Team then
-        return LocalPlayer.Team ~= player.Team
-    end
-    return true
+-------------------------
+-- Exploits Tab
+-------------------------
+Exploits:CreateButton({ Name="Click Delete", Callback=function()
+    local m = LocalPlayer:GetMouse()
+    m.Button1Down:Connect(function()
+        if m.Target and m.Target.Parent:FindFirstChild("Humanoid") then
+            m.Target.Parent:BreakJoints()
+        end
+    end)
+end })
+
+-------------------------
+-- FTAP Tab
+-------------------------
+FTAPTab:CreateToggle({ Name="Enable Fling", CurrentValue=flingEnabled, Callback=function(v) flingEnabled=v end })
+FTAPTab:CreateSlider({ Name="Fling Strength", Range={100,5000}, Increment=50, CurrentValue=flingStrength, Callback=function(v)
+    flingStrength=v
+    Rayfield:Notify({Title="FTAP", Content="Strength: "..v, Duration=1})
+end })
+FTAPTab:CreateToggle({ Name="AntiGrab", CurrentValue=antiGrabEnabled, Callback=function(v)
+    antiGrabEnabled=v
+    Rayfield:Notify({Title="AntiGrab", Content=v and "Enabled" or "Disabled", Duration=2})
+end })
+FTAPTab:CreateToggle({ Name="Spawn Kill All", CurrentValue=spawnKillAll, Callback=function(v)
+    spawnKillAll=v
+    if v then spawn(function() while spawnKillAll do
+        for _,plr in ipairs(Players:GetPlayers()) do
+            if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                plr.Character.HumanoidRootPart.CFrame = CFrame.new(0,-500,0)
+            end
+        end
+        task.wait(1)
+    end end) end
+end })
+FTAPTab:CreateToggle({ Name="Fling All", CurrentValue=flingAll, Callback=function(v)
+    flingAll=v
+    if v then spawn(function() while flingAll do
+        for _,plr in ipairs(Players:GetPlayers()) do
+            if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp=plr.Character.HumanoidRootPart
+                local root=LocalPlayer.Character.HumanoidRootPart
+                for i=1,60 do
+                    root.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0,math.rad(i*6),0)
+                    task.wait(0.01)
+                end
+            end
+        end
+        task.wait(0.5)
+    end end) end
+end })
+
+-- Fixed fling on grab release
+do
+    local grabMap={}
+    workspace.ChildAdded:Connect(function(obj)
+        if obj.Name=="GrabParts" and obj:FindFirstChild("GrabPart") then
+            local weld=obj.GrabPart:FindFirstChildWhichIsA("WeldConstraint") or obj.GrabPart:FindFirstChildWhichIsA("Weld")
+            if antiGrabEnabled and weld then weld:Destroy() end
+            if weld then grabMap[obj]=weld.Part1 end
+        end
+    end)
+    workspace.ChildRemoved:Connect(function(obj)
+        local part=grabMap[obj]
+        grabMap[obj]=nil
+        if part and flingEnabled then
+            local bv=Instance.new("BodyVelocity")
+            bv.MaxForce=Vector3.new(1e9,1e9,1e9)
+            bv.Velocity=Camera.CFrame.LookVector*flingStrength
+            bv.Parent=part
+            Debris:AddItem(bv,0.4)
+        end
+    end)
 end
 
-local function getClosestTarget()
-    local closest = nil
-    local distClosest = math.huge
-    local mousePos = UserInputService:GetMouseLocation()
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(states.TargetPart) then
-            if isEnemy(player) then
-                local part = player.Character[states.TargetPart]
-                local screenPoint, onScreen = Camera:WorldToViewportPoint(part.Position)
-                if onScreen then
-                    local dist = (Vector2.new(mousePos.X, mousePos.Y) - Vector2.new(screenPoint.X, screenPoint.Y)).Magnitude
-                    if dist < distClosest and dist < states.AimFOV then
-                        distClosest = dist
-                        closest = player
+-------------------------
+-- TSB Tab
+-------------------------
+do
+    local TweenInfoTSB = TweenInfo.new(0.3, Enum.EasingStyle.Linear)
+    local TSBTargetPlayer=nil
+    local LowHP,RecoverHP,SafeFlyHeight,SafeFlySpeed = 0.35,0.55,1000,50
+    local SafeFly=false
+
+    local function enableSafeFly()
+        local hrp=LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local humanoid= LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hrp and humanoid then
+            SafeFly=true
+            humanoid.PlatformStand=true
+            hrp.Anchored=true
+            hrp.CFrame=hrp.CFrame+Vector3.new(0,SafeFlyHeight,0)
+            while SafeFly do
+                local dt=RunService.Heartbeat:Wait()
+                hrp.CFrame=hrp.CFrame+Vector3.new(0,SafeFlySpeed*dt,0)
+                if humanoid.Health/humanoid.MaxHealth>=RecoverHP then SafeFly=false end
+            end
+            hrp.Anchored=false
+            humanoid.PlatformStand=false
+        end
+    end
+
+    local function autofarmTSB()
+        while autofarmEnabled do
+            local hrp=LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                if not TSBTargetPlayer or not TSBTargetPlayer.Character or TSBTargetPlayer.Character:FindFirstChildOfClass("Humanoid").Health<=0 then
+                    local dist,nearest=math.huge,nil
+                    for _,plr in ipairs(Players:GetPlayers()) do
+                        if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                            local h=plr.Character:FindFirstChildOfClass("Humanoid")
+                            if h and h.Health>0 then
+                                local d=(hrp.Position-plr.Character.HumanoidRootPart.Position).Magnitude
+                                if d<dist then dist,nearest=d,plr end
+                            end
+                        end
+                    end
+                    TSBTargetPlayer=nearest
+                end
+                if TSBTargetPlayer and TSBTargetPlayer.Character then
+                    local tHRP=TSBTargetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    if tHRP then
+                        local tween=TweenService:Create(hrp,TweenInfoTSB,{CFrame=tHRP.CFrame*CFrame.new(0,3,0)})
+                        tween:Play()
+                        tween.Completed:Wait()
+                    end
+                    local humanoid=LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                    if humanoid and humanoid.Health/humanoid.MaxHealth<=LowHP then
+                        enableSafeFly()
                     end
                 end
             end
-        end
-    end
-    return closest
-end
-
-RunService.Heartbeat:Connect(function()
-    -- Autofarm example for TSB (basic targeting)
-    if states.autofarmEnabled then
-        local target = getClosestTarget()
-        if target and target.Character and target.Character:FindFirstChild(states.TargetPart) then
-            -- Example attack logic (needs adaptation to actual remote)
-            print("Auto-attacking " .. target.Name)
-            -- Add your remote calls for TSB attack here
+            task.wait()
         end
     end
 
-    -- Aimbot
-    if states.AimbotOn and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local target = getClosestTarget()
-        if target and target.Character and target.Character:FindFirstChild(states.TargetPart) then
-            local targetPos = target.Character[states.TargetPart].Position
-            local hrp = LocalPlayer.Character.HumanoidRootPart
-            local camCF = Camera.CFrame
-            local newCF = CFrame.new(camCF.Position, targetPos)
-            Camera.CFrame = newCF
-        end
-    end
-end)
-
--- FTAP Grab & Fling Logic (simplified)
--- Replace remote names with actual game remotes
-local FTAPRemote = nil
-pcall(function()
-    -- Try to find remote
-    FTAPRemote = game:GetService("ReplicatedStorage"):WaitForChild("GrabRemote", 5)
-end)
-
-local grabbedPlayer = nil
-local function flingPlayer(targetPlayer)
-    if not targetPlayer or not targetPlayer.Character then return end
-    local hrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    -- fling logic, example applying BodyVelocity or remote calls
-    print("Flinging player: " .. targetPlayer.Name)
-    -- Use actual fling remote or BodyVelocity here
+    TSBTab:CreateToggle({ Name="Enable Autofarm", CurrentValue=false, Callback=function(v)
+        autofarmEnabled=v
+        if v then spawn(autofarmTSB) end
+    end })
 end
 
--- This is placeholder - actual FTAP grab logic involves detecting grab events, etc.
-RunService.Heartbeat:Connect(function()
-    if states.flingEnabled and grabbedPlayer then
-        flingPlayer(grabbedPlayer)
-    end
-end)
+-------------------------
+-- BloxFruits Tab (scaffolded)
+-------------------------
+BloxFruits:CreateLabel({Name="(BloxFruits features coming soon)"})
 
--- SAB (Steal A Brainrot) Anticheat Bypass (placeholder)
-if states.sabActive then
-    -- Run SAB bypass loadstring or inject code here
-    print("SAB Anticheat bypass active.")
-end
-
--- AstraCloud Anticheat Bypass (placeholder)
-if states.anticheatBypassActive then
-    -- Implement advanced anticheat bypasses here
-    print("AstraCloud anticheat bypass active.")
-end
-
--- Unlimited Zoom Logic
-UserInputService.InputChanged:Connect(function(input)
-    if states.unlimitedZoom and input.UserInputType == Enum.UserInputType.MouseWheel then
-        local newDist = Camera.CameraSubject and Camera.CameraSubject.Focus.Position or Camera.CFrame.Position
-        Camera.FieldOfView = math.clamp(Camera.FieldOfView - input.Position.Z * 3, 5, 120)
-    end
-end)
-
--- Minimize/Close Logic
-local minimized = false
-
-MinimizeButton.MouseButton1Click:Connect(function()
-    if minimized then
-        MainFrame.Visible = true
-        MinimizedBar.Visible = false
-        minimized = false
+-------------------------
+-- Steal A Brainrot Tab (SAB)
+-------------------------
+SABTab:CreateToggle({ Name="Enable SAB Anticheat Bypass", CurrentValue=false, Callback=function(v)
+    -- Your existing SAB anticheat bypass code here (simplified placeholder)
+    if v then
+        Rayfield:Notify({Title="SAB Anticheat", Content="Enabled", Duration=2})
     else
-        MainFrame.Visible = false
-        MinimizedBar.Visible = true
-        minimized = true
+        Rayfield:Notify({Title="SAB Anticheat", Content="Disabled", Duration=2})
     end
-end)
+end })
 
-CloseButton.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
+-------------------------
+-- AstraCloud Tab
+-------------------------
+local detectedItems = {}
 
-MinimizedBar.MouseButton1Click:Connect(function()
-    MainFrame.Visible = true
-    MinimizedBar.Visible = false
-    minimized = false
-end)
+local function NotifyDetection(item)
+    if not detectedItems[item] then
+        detectedItems[item] = true
+        Rayfield:Notify({Title="[AstraCloud] Detected", Content=item.." WATCH OUT", Duration=3})
+    end
+end
 
--- Select first tab by default
-tabButtons[tabs[1]]:MouseButton1Click()
+AstraCloud:CreateToggle({ Name="Admin/Exploiter Detection", CurrentValue=false, Callback=function(enabled)
+    if enabled then
+        -- Monitor logs, console, or executed loadstrings (simplified)
+        RunService.Heartbeat:Connect(function()
+            -- This is a mock detection example, replace with real detection code
+            if game:GetService("LogService") then
+                local logs = {} -- supposed logs
+                for _, log in pairs(logs) do
+                    if log:match("Admin") or log:match("Exploit") then
+                        NotifyDetection("Suspicious Activity")
+                    end
+                end
+            end
+        end)
+    else
+        detectedItems = {}
+    end
+end })
 
-print("Nebula Hub Universal Fully Loaded with all features!")
+AstraCloud:CreateToggle({ Name="Anticheat Bypasser", CurrentValue=false, Callback=function(enabled)
+    if enabled then
+        -- Disable in-game anticheats
+        Rayfield:Notify({Title="AstraCloud", Content="Anticheat Bypass Enabled", Duration=2})
+        -- Example: Disable kick functions (placeholder)
+        hookfunction = hookfunction or function() end
+        pcall(function()
+            local mt = getrawmetatable(game)
+            setreadonly(mt, false)
+            local old = mt.__namecall
+            mt.__namecall = newcclosure(function(self,...)
+                local method = getnamecallmethod()
+                if method == "Kick" then
+                    return wait(math.huge)
+                end
+                return old(self,...)
+            end)
+            setreadonly(mt, true)
+        end)
+    else
+        Rayfield:Notify({Title="AstraCloud", Content="Anticheat Bypass Disabled", Duration=2})
+    end
+end })
 
+AstraCloud:CreateToggle({ Name="Command Logger", CurrentValue=false, Callback=function(enabled)
+    if enabled then
+        -- Log commands executed (simplified)
+        print("[AstraCloud] Command Logger Enabled")
+    else
+        print("[AstraCloud] Command Logger Disabled")
+    end
+end })
+
+AstraCloud:CreateToggle({ Name="Script Injector Detection", CurrentValue=false, Callback=function(enabled)
+    if enabled then
+        -- Monitor for injected scripts (placeholder)
+        Rayfield:Notify({Title="AstraCloud", Content="Injector Detection Enabled", Duration=2})
+    else
+        Rayfield:Notify({Title="AstraCloud", Content="Injector Detection Disabled", Duration=2})
+    end
+end })
+
+AstraCloud:CreateToggle({ Name="Server Crasher", CurrentValue=false, Callback=function(enabled)
+    if enabled then
+        spawn(function()
+            while enabled do
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer then
+                        p:Kick("Server Crashed by AstraCloud")
+                    end
+                end
+                task.wait(2)
+            end
+        end)
+        Rayfield:Notify({Title="AstraCloud", Content="Server Crasher Activated", Duration=2})
+    else
+        Rayfield:Notify({Title="AstraCloud", Content="Server Crasher Deactivated", Duration=2})
+    end
+end })
+
+AstraCloud:CreateButton({ Name="Instant Kill", Callback=function()
+    local char = LocalPlayer.Character
+    if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.Health = 0
+        end
+    end
+end })
+
+AstraCloud:CreateToggle({ Name="Godmode", CurrentValue=false, Callback=function(enabled)
+    local char = LocalPlayer.Character
+    if not char then return end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    if enabled then
+        humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+            if humanoid.Health <= 0 then
+                humanoid.Health = humanoid.MaxHealth
+            end
+        end)
+        humanoid.Health = humanoid.MaxHealth
+        Rayfield:Notify({Title="AstraCloud", Content="Godmode Enabled", Duration=2})
+    else
+        Rayfield:Notify({Title="AstraCloud", Content="Godmode Disabled", Duration=2})
+    end
+end })
+
+AstraCloud:CreateSlider({ Name="Unlimited Zoom", Range={0,500}, CurrentValue=70, Callback=function(val)
+    Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") or nil
+    Camera.FieldOfView = val
+end })
+
+-------------------------
+-- Final Notifications
+-------------------------
+Rayfield:Notify({Title="Nebula Hub Universal", Content="Loaded All Features Successfully", Duration=3})
+
+return Window

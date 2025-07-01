@@ -94,6 +94,11 @@ local WalkSpeedSlider = Utility:CreateSlider({
     CurrentValue = WalkSpeedValue,
     Callback = function(v)
         WalkSpeedValue = v
+        if WalkSpeedSlider.SetValue then
+            WalkSpeedSlider:SetValue(v)
+        else
+            WalkSpeedSlider.CurrentValue = v
+        end
         local char = LocalPlayer.Character
         if char then
             local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -110,6 +115,11 @@ local JumpPowerSlider = Utility:CreateSlider({
     CurrentValue = JumpPowerValue,
     Callback = function(v)
         JumpPowerValue = v
+        if JumpPowerSlider.SetValue then
+            JumpPowerSlider:SetValue(v)
+        else
+            JumpPowerSlider.CurrentValue = v
+        end
         local char = LocalPlayer.Character
         if char then
             local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -382,18 +392,180 @@ do
                         tween.Completed:Wait()
                     end
                     local humanoid=LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-                    if humanoid and humanoid.Health/humanoid.MaxHealth<=LowHP then
-                        enableSafeFly()
+                    if humanoid then
+                        if humanoid.Health/humanoid.MaxHealth<=LowHP then
+                            enableSafeFly()
+                        end
                     end
                 end
             end
-            task.wait()
+            task.wait(0.2)
         end
     end
 
     TSBTab:CreateToggle({ Name="Enable Autofarm", CurrentValue=false, Callback=function(v)
-    autofarmEnabled = v
-    if v then
-        spawn(autofarmTSB)
+        autofarmEnabled = v
+        if v then
+            spawn(autofarmTSB)
+        end
+    end})
+
+    TSBTab:CreateButton({ Name="Stop Autofarm", Callback=function()
+        autofarmEnabled = false
+    end })
+end
+
+-------------------------
+-- BloxFruits Tab (Scaffold)
+-------------------------
+BloxFruits:CreateLabel({ Name="Coming Soon..." })
+BloxFruits:CreateButton({ Name="Placeholder Button", Callback=function() Rayfield:Notify({Title="BloxFruits", Content="Feature coming soon!", Duration=2}) end })
+
+-------------------------
+-- Steal A Brainrot Tab
+-------------------------
+SABTab:CreateToggle({ Name="Enable SAB Auto Farm", CurrentValue=false, Callback=function(v)
+    -- Placeholder toggle for SAB autofarm
+    Rayfield:Notify({Title="SAB", Content="SAB Auto Farm feature will be implemented here.", Duration=2})
+end })
+
+SABTab:CreateButton({ Name="Run SAB Script", Callback=function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/gumanba/Scripts/main/StealaBrainrotMOD"))()
+end })
+
+-------------------------
+-- AstraCloud Tab
+-------------------------
+local function Notify(msg)
+    StarterGui:SetCore("SendNotification", {
+        Title = "AstraCloud",
+        Text = msg,
+        Duration = 4
+    })
+end
+
+local AdminDetected = false
+local function ScanForAdmins()
+    -- Example simplistic admin detection: scan chat logs or console logs for known admin keywords
+    -- You can expand this with more complex checks as needed
+    for _, log in ipairs({"admin", "kick", "ban", "exploit", "cheat"}) do
+        -- Dummy example: in real scenario, connect to log events
+        if string.find(string.lower(tostring(log)), "kick") then
+            AdminDetected = true
+            Notify("Admin/Exploiter Detected! WATCH OUT!")
+            break
+        end
     end
-end})
+end
+
+AstraCloud:CreateToggle({ Name="Admin/Exploiter Detection", CurrentValue=false, Callback=function(v)
+    if v then
+        ScanForAdmins()
+    else
+        AdminDetected = false
+    end
+end })
+
+AstraCloud:CreateButton({ Name="Activate Anticheat Bypasser", Callback=function()
+    -- Simple anticheat bypasser example: disables some kicks, detection
+    getgenv().AstraCloudAnticheatBypasser = true
+    Notify("Anticheat Bypasser Enabled")
+end })
+
+AstraCloud:CreateButton({ Name="Godmode", Callback=function()
+    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.Health = humanoid.MaxHealth
+        humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+            humanoid.Health = humanoid.MaxHealth
+        end)
+        Notify("Godmode Enabled")
+    end
+end })
+
+AstraCloud:CreateButton({ Name="Instant Kill", Callback=function()
+    -- Simple instant kill on nearest enemy example
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    local nearest, dist = nil, math.huge
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChildOfClass("Humanoid") then
+            local h = plr.Character:FindFirstChildOfClass("Humanoid")
+            local hrp2 = plr.Character:FindFirstChild("HumanoidRootPart")
+            if h and h.Health > 0 and hrp2 then
+                local d = (hrp.Position - hrp2.Position).Magnitude
+                if d < dist then
+                    dist = d
+                    nearest = plr
+                end
+            end
+        end
+    end
+    if nearest then
+        local humanoid = nearest.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid.Health = 0 end
+        Notify("Instant Kill executed!")
+    else
+        Notify("No target found!")
+    end
+end })
+
+AstraCloud:CreateButton({ Name="Unlimited Zoom", Callback=function()
+    Camera.CameraType = Enum.CameraType.Scriptable
+    Camera.FieldOfView = 5
+    Notify("Unlimited Zoom enabled")
+end })
+
+AstraCloud:CreateButton({ Name="Reset Zoom", Callback=function()
+    Camera.CameraType = Enum.CameraType.Custom
+    Camera.FieldOfView = 70
+    Notify("Zoom reset")
+end })
+
+AstraCloud:CreateButton({ Name="Server Crasher", Callback=function()
+    -- WARNING: Can cause game crash or lag - use with caution!
+    for i=1,50 do
+        local clone = Instance.new("Part")
+        clone.Anchored = true
+        clone.Size = Vector3.new(1000,1000,1000)
+        clone.Position = LocalPlayer.Character and LocalPlayer.Character.HumanoidRootPart.Position or Vector3.new(0,0,0)
+        clone.Parent = workspace
+    end
+    Notify("Server crasher executed")
+end })
+
+AstraCloud:CreateToggle({ Name="Command Logger", CurrentValue=false, Callback=function(v)
+    if v then
+        -- Example hooking chat commands
+        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.OnMessageDoneFiltering.OnClientEvent:Connect(function(msg)
+            print("Chat Command Logged: ", msg.Message)
+        end)
+        Notify("Command Logger Enabled")
+    else
+        Notify("Command Logger Disabled")
+    end
+end })
+
+AstraCloud:CreateButton({ Name="Script Injector Detection", Callback=function()
+    -- Placeholder - detection logic here
+    Notify("Script Injector Detection is under development.")
+end })
+
+-------------------------
+-- Unload GUI Button
+-------------------------
+Window:CreateButton({
+    Name = "Unload Nebula Hub",
+    Callback = function()
+        Rayfield:Destroy()
+        for _, conn in pairs(getconnections or {}) do
+            if type(conn) == "userdata" and conn.Disconnect then
+                pcall(function() conn:Disconnect() end)
+            end
+        end
+    end
+})
+
+-------------------------
+-- END OF SCRIPT
+-------------------------

@@ -1,4 +1,4 @@
--- Nebula Hub Universal - Full Integrated Version
+-- Nebula Hub Universal Full Organized Script-- Nebula Hub Universal - Full Integrated Version
 -- Includes: TSB, FTAP, BloxFruits, SAB, AstraCloud, Full UI + Game Logic
 
 local Players = game:GetService("Players")

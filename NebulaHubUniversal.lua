@@ -392,4 +392,8 @@ do
     end
 
     TSBTab:CreateToggle({ Name="Enable Autofarm", CurrentValue=false, Callback=function(v)
-        autofarmEnabled=v
+    autofarmEnabled = v
+    if v then
+        spawn(autofarmTSB)
+    end
+end})

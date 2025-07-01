@@ -1,65 +1,30 @@
--- Nebula Hub Universal - Full + Fixed WalkSpeed/JumpPower Sliders and AstraCloud TabAdd commentMore actions
--- Made by Elden and Nate + fully integrated features
--- Nebula Hub Universal - Full Updated Script with all tabs and game logic
+-- Nebula Hub Universal - Full Updated Script with all tabs and game logicAdd commentMore actions
 -- Made for KRNL and similar exploit environments
 -- All features integrated with advanced anticheat bypasses and admin detection
+-- Nebula Hub Universal - Full Integrated Version
+-- Includes: TSB, FTAP, BloxFruits, SAB, AstraCloud, Full UI + Game Logic
 
 -- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
 local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local Camera = workspace.CurrentCamera
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
--- Wait for character load
 -- Wait for character & HumanoidRootPart
 if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
     LocalPlayer.CharacterAdded:Wait()
     repeat task.wait() until LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 end
 
--- GUI variables
-local GUIName = "NebulaHubGUI"
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = GUIName
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.Parent = game.CoreGui
-
-local TweenService = game:GetService("TweenService")
-
--- Colors
-local Purple = Color3.fromRGB(128, 0, 128)
-local Gold = Color3.fromRGB(255, 215, 0)
-local White = Color3.fromRGB(255, 255, 255)
-local BackgroundColor = Color3.fromRGB(30, 30, 50)
-
--- Main frame
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 450, 0, 600)
-MainFrame.Position = UDim2.new(0.5, -225, 0.5, -300)
-MainFrame.BackgroundColor3 = BackgroundColor
-MainFrame.BorderSizePixel = 0
-MainFrame.Parent = ScreenGui
-MainFrame.Active = true
-MainFrame.Draggable = true
-
--- Top bar
-local TopBar = Instance.new("Frame")
-TopBar.Name = "TopBar"
-TopBar.Size = UDim2.new(1, 0, 0, 30)
-TopBar.BackgroundColor3 = Purple
-TopBar.BorderSizePixel = 0
-TopBar.Parent = MainFrame
 -- Custom GUI Creation (Purple/White/Gold Theme)
 local NebulaGUI = Instance.new("ScreenGui")
 NebulaGUI.Name = "NebulaHubGUI"
@@ -116,29 +81,6 @@ topBar.BorderSizePixel = 0
 topBar.Parent = mainFrame
 
 -- Title Label
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Name = "TitleLabel"
-TitleLabel.Size = UDim2.new(0, 200, 1, 0)
-TitleLabel.Position = UDim2.new(0, 10, 0, 0)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Nebula Hub"
-TitleLabel.TextColor3 = White
-TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.TextSize = 18
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-TitleLabel.Parent = TopBar
-
--- Minimize Button (line)
-local MinimizeBtn = Instance.new("TextButton")
-MinimizeBtn.Name = "MinimizeBtn"
-MinimizeBtn.Size = UDim2.new(0, 30, 1, 0)
-MinimizeBtn.Position = UDim2.new(1, -60, 0, 0)
-MinimizeBtn.BackgroundColor3 = Gold
-MinimizeBtn.Text = "-"
-MinimizeBtn.TextColor3 = Purple
-MinimizeBtn.Font = Enum.Font.GothamBold
-MinimizeBtn.TextSize = 24
-MinimizeBtn.Parent = TopBar
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Text = "Nebula Hub Universal"
 titleLabel.Font = Enum.Font.GothamBold
@@ -161,76 +103,57 @@ minimizeBtn.Size = UDim2.new(0, 30, 1, 0)
 minimizeBtn.Position = UDim2.new(0.8, 0, 0, 0)
 minimizeBtn.AutoButtonColor = false
 minimizeBtn.Parent = topBar
+-- Main GUI Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "NebulaHubGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
+
+-- Main Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 450, 0, 520)
+MainFrame.Position = UDim2.new(0.5, -225, 0.5, -260)
+MainFrame.BackgroundColor3 = Color3.fromRGB(55, 0, 88) -- Dark purple
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+-- Title bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Name = "TitleBar"
+TitleBar.Size = UDim2.new(1, 0, 0, 30)
+TitleBar.BackgroundColor3 = Color3.fromRGB(88, 44, 155) -- Purple
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "TitleLabel"
+TitleLabel.Size = UDim2.new(0.8, 0, 1, 0)
+TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "Nebula Hub Universal"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 215, 0) -- Gold
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextSize = 18
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = TitleBar
+
+-- Minimize Button (Line)
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Name = "MinimizeButton"
+MinimizeButton.Size = UDim2.new(0, 30, 1, 0)
+MinimizeButton.Position = UDim2.new(1, -60, 0, 0)
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(88, 44, 155)
+MinimizeButton.BorderSizePixel = 0
+MinimizeButton.Text = "-"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 215, 0)
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.TextSize = 24
+MinimizeButton.Parent = TitleBar
 
 -- Close Button (X)
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Name = "CloseBtn"
-CloseBtn.Size = UDim2.new(0, 30, 1, 0)
-CloseBtn.Position = UDim2.new(1, -30, 0, 0)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = White
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 20
-CloseBtn.Parent = TopBar
-
--- Minimized Frame
-local MinimizedFrame = Instance.new("Frame")
-MinimizedFrame.Name = "MinimizedFrame"
-MinimizedFrame.Size = UDim2.new(0, 150, 0, 30)
-MinimizedFrame.Position = UDim2.new(0.5, -75, 0.5, -15)
-MinimizedFrame.BackgroundColor3 = Gold
-MinimizedFrame.BorderSizePixel = 0
-MinimizedFrame.Visible = false
-MinimizedFrame.Parent = ScreenGui
-
-local MinimizedLabel = Instance.new("TextLabel")
-MinimizedLabel.Size = UDim2.new(1, 0, 1, 0)
-MinimizedLabel.BackgroundTransparency = 1
-MinimizedLabel.Text = "N"
-MinimizedLabel.TextColor3 = Purple
-MinimizedLabel.Font = Enum.Font.GothamBlack
-MinimizedLabel.TextSize = 24
-MinimizedLabel.Parent = MinimizedFrame
-
--- Tabs container (scrollframe)
-local TabsFrame = Instance.new("Frame")
-TabsFrame.Name = "TabsFrame"
-TabsFrame.Size = UDim2.new(1, 0, 1, -30)
-TabsFrame.Position = UDim2.new(0, 0, 0, 30)
-TabsFrame.BackgroundTransparency = 1
-TabsFrame.Parent = MainFrame
-
--- Create simple tab buttons container
-local TabButtonsFrame = Instance.new("Frame")
-TabButtonsFrame.Name = "TabButtonsFrame"
-TabButtonsFrame.Size = UDim2.new(1, 0, 0, 40)
-TabButtonsFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 70)
-TabButtonsFrame.Parent = TabsFrame
-
--- Container for tab content
-local TabContentFrame = Instance.new("Frame")
-TabContentFrame.Name = "TabContentFrame"
-TabContentFrame.Size = UDim2.new(1, 0, 1, -40)
-TabContentFrame.Position = UDim2.new(0, 0, 0, 40)
-TabContentFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 45)
-TabContentFrame.Parent = TabsFrame
-TabContentFrame.ClipsDescendants = true
-
--- Table to hold tab buttons and their content frames
-local Tabs = {}
-local SelectedTabName = nil
-
-local function CreateTab(name)
-    local button = Instance.new("TextButton")
-    button.Name = name .. "Button"
-    button.Size = UDim2.new(0, 100, 1, 0)
-    button.BackgroundColor3 = Color3.fromRGB(55, 55, 95)
-    button.Text = name
-    button.TextColor3 = White
-    button.Font = Enum.Font.GothamSemibold
-    button.TextSize = 14
-    button.Parent = TabButtonsFrame
 local closeBtn = Instance.new("TextButton")
 closeBtn.Text = "X"
 closeBtn.Font = Enum.Font.GothamBlack
@@ -321,8 +244,66 @@ contentFrame.Parent = tabFrame
 
 -- Create buttons and content frames
 for i, tabName in ipairs(tabs) do
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Size = UDim2.new(0, 30, 1, 0)
+CloseButton.Position = UDim2.new(1, -30, 0, 0)
+CloseButton.BackgroundColor3 = Color3.fromRGB(88, 44, 155)
+CloseButton.BorderSizePixel = 0
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 215, 0)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 20
+CloseButton.Parent = TitleBar
+
+-- Tab Buttons Frame
+local TabsFrame = Instance.new("Frame")
+TabsFrame.Name = "TabsFrame"
+TabsFrame.Size = UDim2.new(0, 120, 1, -30)
+TabsFrame.Position = UDim2.new(0, 0, 0, 30)
+TabsFrame.BackgroundColor3 = Color3.fromRGB(44, 0, 66) -- Slightly darker purple
+TabsFrame.BorderSizePixel = 0
+TabsFrame.Parent = MainFrame
+
+local TabsLayout = Instance.new("UIListLayout")
+TabsLayout.FillDirection = Enum.FillDirection.Vertical
+TabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabsLayout.Padding = UDim.new(0, 5)
+TabsLayout.Parent = TabsFrame
+
+-- Content Frame
+local TabContentFrame = Instance.new("Frame")
+TabContentFrame.Name = "TabContentFrame"
+TabContentFrame.Size = UDim2.new(1, -120, 1, -30)
+TabContentFrame.Position = UDim2.new(0, 120, 0, 30)
+TabContentFrame.BackgroundColor3 = Color3.fromRGB(40, 0, 70)
+TabContentFrame.BorderSizePixel = 0
+TabContentFrame.Parent = MainFrame
+
+-- Minimized Bar
+local MinimizedBar = Instance.new("TextButton")
+MinimizedBar.Name = "MinimizedBar"
+MinimizedBar.Size = UDim2.new(0, 150, 0, 30)
+MinimizedBar.Position = UDim2.new(0.5, -75, 0, 20)
+MinimizedBar.BackgroundColor3 = Color3.fromRGB(88, 44, 155)
+MinimizedBar.BorderSizePixel = 0
+MinimizedBar.Text = "N"
+MinimizedBar.TextColor3 = Color3.fromRGB(255, 215, 0)
+MinimizedBar.Font = Enum.Font.GothamBlack
+MinimizedBar.TextSize = 28
+MinimizedBar.Visible = false
+MinimizedBar.Parent = ScreenGui
+MinimizedBar.Active = true
+MinimizedBar.Draggable = true
+
+-- Helper functions to create UI components
+local function createButton(text, parent, callback)
     local btn = Instance.new("TextButton")
     btn.Text = tabName
+    btn.Size = UDim2.new(1, -20, 0, 30)
+    btn.BackgroundColor3 = Color3.fromRGB(128, 0, 255)
+    btn.BorderSizePixel = 0
+    btn.TextColor3 = Color3.new(1,1,1)
     btn.Font = Enum.Font.GothamBold
     btn.TextSize = 14
     btn.BackgroundColor3 = Color3.fromRGB(68, 34, 127)
@@ -333,30 +314,19 @@ for i, tabName in ipairs(tabs) do
     tabButtons[tabName] = btn
 
     local content = Instance.new("ScrollingFrame")
-    content.Name = name .. "Content"
-    content.Size = UDim2.new(1, 0, 1, 0)
-    content.CanvasSize = UDim2.new(0, 0, 2, 0)
-    content.ScrollBarThickness = 6
     content.Size = UDim2.new(1, -10, 1, -10)
     content.Position = UDim2.new(0, 5, 0, 5)
     content.BackgroundTransparency = 1
     content.ScrollBarThickness = 6
     content.Visible = false
-    content.Parent = TabContentFrame
     content.Parent = contentFrame
     tabContents[tabName] = content
 end
 
-    Tabs[name] = {Button = button, Content = content}
 -- Show first tab by default
 local currentTab = tabs[1]
 tabContents[currentTab].Visible = true
 
-    button.MouseButton1Click:Connect(function()
-        -- Switch tab visibility
-        for tn, tab in pairs(Tabs) do
-            tab.Content.Visible = false
-            tab.Button.BackgroundColor3 = Color3.fromRGB(55, 55, 95)
 -- Tab switching logic
 for tabName, btn in pairs(tabButtons) do
     btn.MouseButton1Click:Connect(function()
@@ -365,49 +335,28 @@ for tabName, btn in pairs(tabButtons) do
             tabContents[tabName].Visible = true
             currentTab = tabName
         end
-        content.Visible = true
-        button.BackgroundColor3 = Purple
-        SelectedTabName = name
     end)
-
-    return content
+    btn.TextSize = 16
+    btn.Text = text
+    btn.Parent = parent
+    btn.MouseButton1Click:Connect(callback)
+    return btn
 end
 
--- Create tabs
-local UtilityTab = CreateTab("Utility")
-local TrollTab = CreateTab("Troll")
-local AutoTab = CreateTab("Auto")
-local RemoteTab = CreateTab("Remotes")
-local VisualTab = CreateTab("Visual")
-local ExploitsTab = CreateTab("Exploits")
-local FTAPTab = CreateTab("FTAP")
-local TSBTab = CreateTab("TSB")
-local BloxFruitsTab = CreateTab("BloxFruits")
-local SABTab = CreateTab("StealABrainrot")
-local AstraCloudTab = CreateTab("AstraCloud")
-
--- Select first tab by default
-Tabs["Utility"].Button.BackgroundColor3 = Purple
-Tabs["Utility"].Content.Visible = true
-SelectedTabName = "Utility"
-
--- Helper function: Create toggle button
-local function CreateToggle(parent, name, default, callback)
 -- Helper: create toggle inside a parent with label
 local function CreateToggle(parent, text, default)
+local function createToggle(text, parent, default, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -20, 0, 30)
     frame.Size = UDim2.new(1, -10, 0, 30)
+    frame.Size = UDim2.new(1, -20, 0, 30)
     frame.BackgroundTransparency = 1
     frame.Parent = parent
 
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.75, 0, 1, 0)
-    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Size = UDim2.new(0.7, 0, 1, 0)
     label.BackgroundTransparency = 1
-    label.Text = name
-    label.TextColor3 = White
     label.Text = text
+    label.TextColor3 = Color3.new(1,1,1)
     label.Font = Enum.Font.Gotham
     label.TextSize = 16
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -416,25 +365,6 @@ local function CreateToggle(parent, text, default)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
 
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, 40, 0.6, 0)
-    toggleBtn.Position = UDim2.new(0.8, 0, 0.2, 0)
-    toggleBtn.BackgroundColor3 = default and Gold or Color3.fromRGB(100, 100, 100)
-    toggleBtn.Text = default and "ON" or "OFF"
-    toggleBtn.TextColor3 = Purple
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.TextSize = 14
-    toggleBtn.Parent = frame
-
-    local toggled = default
-
-    toggleBtn.MouseButton1Click:Connect(function()
-        toggled = not toggled
-        toggleBtn.BackgroundColor3 = toggled and Gold or Color3.fromRGB(100, 100, 100)
-        toggleBtn.Text = toggled and "ON" or "OFF"
-        if callback then
-            callback(toggled)
-        end
     local toggle = Instance.new("TextButton")
     toggle.Size = UDim2.new(0, 50, 0, 20)
     toggle.Position = UDim2.new(0.8, 0, 0.15, 0)
@@ -452,87 +382,91 @@ local function CreateToggle(parent, text, default)
         toggle.Text = state and "ON" or "OFF"
     end)
 
-    return frame, function() return toggled end, function(v)
-        toggled = v
-        toggleBtn.BackgroundColor3 = toggled and Gold or Color3.fromRGB(100, 100, 100)
-        toggleBtn.Text = toggled and "ON" or "OFF"
-        if callback then callback(toggled) end
     return frame, function() return state end, function(v)
         state = v
         toggle.BackgroundColor3 = state and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(170, 0, 0)
         toggle.Text = state and "ON" or "OFF"
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.new(0, 40, 0, 20)
+    toggleBtn.Position = UDim2.new(0.75, 0, 0.2, 0)
+    toggleBtn.BackgroundColor3 = default and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(60, 0, 90)
+    toggleBtn.Text = default and "ON" or "OFF"
+    toggleBtn.TextColor3 = Color3.fromRGB(0,0,0)
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.TextSize = 14
+    toggleBtn.Parent = frame
+
+    local toggled = default
+
+    local function updateState()
+        toggleBtn.BackgroundColor3 = toggled and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(60, 0, 90)
+        toggleBtn.Text = toggled and "ON" or "OFF"
+        toggleBtn.TextColor3 = toggled and Color3.fromRGB(0,0,0) or Color3.fromRGB(255, 255, 255)
     end
-end
 
--- Helper function: Create button
-local function CreateButton(parent, name, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -20, 0, 35)
-    btn.BackgroundColor3 = Purple
-    btn.TextColor3 = White
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 16
-    btn.Text = name
-    btn.Position = UDim2.new(0, 10, 0, 0)
-    btn.Parent = parent
-
-    btn.MouseButton1Click:Connect(function()
-        if callback then callback() end
+    toggleBtn.MouseButton1Click:Connect(function()
+        toggled = not toggled
+        updateState()
+        callback(toggled)
     end)
-    return btn
+
+    return frame, function() return toggled end
 end
 
--- Helper function: Create slider
-local function CreateSlider(parent, name, min, max, default, callback)
 -- Helper: create slider inside a parent with label
 local function CreateSlider(parent, text, min, max, default)
+local function createSlider(text, parent, min, max, default, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -20, 0, 50)
     frame.Size = UDim2.new(1, -10, 0, 50)
+    frame.Size = UDim2.new(1, -20, 0, 40)
     frame.BackgroundTransparency = 1
     frame.Parent = parent
 
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.75, 0, 0.5, 0)
-    label.Position = UDim2.new(0, 10, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = name .. ": " .. tostring(default)
-    label.TextColor3 = White
     label.Text = text .. ": " .. tostring(default)
     label.Font = Enum.Font.Gotham
-    label.TextSize = 14
     label.TextSize = 16
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.Size = UDim2.new(1, 0, 0, 20)
     label.BackgroundTransparency = 1
     label.Size = UDim2.new(1, 0, 0.5, 0)
+    label.Text = text.." : "..tostring(default)
+    label.TextColor3 = Color3.new(1,1,1)
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 14
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
 
-    local slider = Instance.new("TextButton")
-    slider.Size = UDim2.new(1, -40, 0, 15)
-    slider.Position = UDim2.new(0, 10, 0, 25)
-    slider.BackgroundColor3 = Color3.fromRGB(55, 55, 95)
-    slider.Text = ""
-    slider.Parent = frame
     local sliderFrame = Instance.new("Frame")
     sliderFrame.Size = UDim2.new(1, 0, 0.5, 0)
     sliderFrame.Position = UDim2.new(0, 0, 0.5, 0)
     sliderFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    sliderFrame.Size = UDim2.new(1, 0, 0, 15)
+    sliderFrame.Position = UDim2.new(0, 0, 0, 25)
+    sliderFrame.BackgroundColor3 = Color3.fromRGB(60, 0, 90)
     sliderFrame.Parent = frame
 
-    local sliderFill = Instance.new("Frame")
-    sliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-    sliderFill.BackgroundColor3 = Gold
-    sliderFill.Parent = slider
     local sliderBar = Instance.new("Frame")
     sliderBar.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
     sliderBar.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
     sliderBar.Parent = sliderFrame
+    local sliderFill = Instance.new("Frame")
+    sliderFill.Size = UDim2.new((default - min)/(max - min), 0, 1, 0)
+    sliderFill.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+    sliderFill.Parent = sliderFrame
+
+    local sliderBtn = Instance.new("TextButton")
+    sliderBtn.Size = UDim2.new(0, 10, 1, 0)
+    sliderBtn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+    sliderBtn.BorderSizePixel = 0
+    sliderBtn.Position = UDim2.new((default - min)/(max - min), 0, 0, 0)
+    sliderBtn.Parent = sliderFrame
+    sliderBtn.AutoButtonColor = false
 
     local dragging = false
-    slider.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
     sliderFrame.InputBegan:Connect(function(input)
+
+    sliderBtn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
             local pos = input.Position.X - sliderFrame.AbsolutePosition.X
@@ -544,21 +478,16 @@ local function CreateSlider(parent, text, min, max, default)
             if callback then callback(sliderVal) end
         end
     end)
-    slider.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
     sliderFrame.InputEnded:Connect(function(input)
+
+    sliderBtn.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
         end
     end)
-    slider.InputChanged:Connect(function(input)
+
     sliderFrame.InputChanged:Connect(function(input)
         if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local pos = math.clamp(input.Position.X - slider.AbsolutePosition.X, 0, slider.AbsoluteSize.X)
-            local value = min + (pos / slider.AbsoluteSize.X) * (max - min)
-            sliderFill.Size = UDim2.new(pos / slider.AbsoluteSize.X, 0, 1, 0)
-            label.Text = name .. ": " .. math.floor(value)
-            if callback then callback(value) end
             local pos = input.Position.X - sliderFrame.AbsolutePosition.X
             local size = sliderFrame.AbsoluteSize.X
             local val = math.clamp(pos / size, 0, 1)
@@ -566,61 +495,83 @@ local function CreateSlider(parent, text, min, max, default)
             local sliderVal = min + (max - min) * val
             label.Text = text .. ": " .. math.floor(sliderVal)
             if callback then callback(sliderVal) end
+            local relativePos = math.clamp((input.Position.X - sliderFrame.AbsolutePosition.X) / sliderFrame.AbsoluteSize.X, 0, 1)
+            sliderFill.Size = UDim2.new(relativePos, 0, 1, 0)
+            sliderBtn.Position = UDim2.new(relativePos, 0, 0, 0)
+            local val = math.floor(min + (max - min) * relativePos + 0.5)
+            label.Text = text.." : "..val
+            callback(val)
         end
+    end)
+
+    local callback = nil
+    return frame
+end
+
+    local function SetCallback(cb)
+        callback = cb
+local function createDropdown(text, parent, options, default, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, -20, 0, 30)
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.7, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.new(1,1,1)
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 16
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = frame
+
+    local dropdownBtn = Instance.new("TextButton")
+    dropdownBtn.Size = UDim2.new(0, 90, 1, 0)
+    dropdownBtn.Position = UDim2.new(0.75, 0, 0, 0)
+    dropdownBtn.BackgroundColor3 = Color3.fromRGB(60, 0, 90)
+    dropdownBtn.TextColor3 = Color3.new(1,1,1)
+    dropdownBtn.Font = Enum.Font.GothamBold
+    dropdownBtn.TextSize = 14
+    dropdownBtn.Text = default
+    dropdownBtn.Parent = frame
+
+    local optionsFrame = Instance.new("Frame")
+    optionsFrame.Size = UDim2.new(0, 90, 0, #options * 20)
+    optionsFrame.Position = UDim2.new(0.75, 0, 1, 0)
+    optionsFrame.BackgroundColor3 = Color3.fromRGB(60, 0, 90)
+    optionsFrame.Visible = false
+    optionsFrame.Parent = frame
+
+    local optionsLayout = Instance.new("UIListLayout")
+    optionsLayout.Parent = optionsFrame
+
+    for i, opt in ipairs(options) do
+        local optBtn = Instance.new("TextButton")
+        optBtn.Size = UDim2.new(1, 0, 0, 20)
+        optBtn.BackgroundColor3 = Color3.fromRGB(80, 10, 120)
+        optBtn.BorderSizePixel = 0
+        optBtn.TextColor3 = Color3.new(1,1,1)
+        optBtn.Font = Enum.Font.Gotham
+        optBtn.TextSize = 14
+        optBtn.Text = opt
+        optBtn.Parent = optionsFrame
+
+        optBtn.MouseButton1Click:Connect(function()
+            dropdownBtn.Text = opt
+            optionsFrame.Visible = false
+            callback(opt)
+        end)
+    end
+
+    return frame, SetCallback
+    dropdownBtn.MouseButton1Click:Connect(function()
+        optionsFrame.Visible = not optionsFrame.Visible
     end)
 
     return frame
 end
 
--- Variables for WalkSpeed and JumpPower
-local WalkSpeedValue = 16
-local JumpPowerValue = 100
-local WalkSpeedEnabled = false
-local JumpPowerEnabled = false
-    local callback = nil
-
--- Utility Tab Features
-do
-    local yPos = 5
-    local function AddToUtility(element)
-        element.Position = UDim2.new(0, 10, 0, yPos)
-        element.Parent = UtilityTab
-        yPos = yPos + element.Size.Y.Offset + 10
-    local function SetCallback(cb)
-        callback = cb
-    end
-
-    -- Click TP Toggle
-    local ClickTP = false
-    local clickConn = nil
-    local clickTPToggle, _, setClickTP = CreateToggle(UtilityTab, "Click TP", false, function(v)
-        ClickTP = v
-        if ClickTP then
-            clickConn = LocalPlayer:GetMouse().Button1Down:Connect(function()
-                local m = LocalPlayer:GetMouse()
-                if m.Target then 
-                    LocalPlayer.Character:MoveTo(m.Hit.p + Vector3.new(0,3,0)) 
-                end
-            end)
-        else
-            if clickConn then clickConn:Disconnect() clickConn = nil end
-        end
-    end)
-    AddToUtility(clickTPToggle)
-
-    -- Infinite Jump Toggle
-    local InfJump = false
-    local infJumpToggle, _, setInfJump = CreateToggle(UtilityTab, "Infinite Jump", false, function(v)
-        InfJump = v
-    end)
-    AddToUtility(infJumpToggle)
-    return frame, SetCallback
-end
-
-    UserInputService.JumpRequest:Connect(function()
-        if InfJump and LocalPlayer.Character then
-            local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid then humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end
 -- ============================
 -- Utility Tab
 -- ============================
@@ -646,19 +597,69 @@ do
             if humanoid then
                 humanoid.WalkSpeed = walkSpeedVal
             end
+-- State variables for toggles/sliders
+local states = {
+    clickTPOn = false,
+    InfJump = false,
+    WalkSpeedValue = 16,
+    JumpPowerValue = 50,
+    flingEnabled = false,
+    flingStrength = 250,
+    antiGrabEnabled = false,
+    spawnKillAll = false,
+    flingAll = false,
+    autofarmEnabled = false,
+    AutoShoot = false,
+    TeamCheck = true,
+    TargetPart = "Head",
+    AimFOV = 90,
+    ESPOn = false,
+    LineESP = false,
+    AimbotOn = false,
+    noclipActive = false,
+    sabActive = false,
+    anticheatBypassActive = false,
+    godmodeActive = false,
+    unlimitedZoom = false,
+    grabbedPlayer = nil,
+}
+
+-- Store esp objects
+local espObjects = {}
+
+-- Tab buttons and content handlers
+local tabs = {
+    "🏠 Utility",
+    "💣 Troll",
+    "🤖 Auto",
+    "📡 Remotes",
+    "🎯 Visual",
+    "⚠️ Exploits",
+    "👐 FTAP",
+    "⚔️ TSB",
+    "🍉 BloxFruits",
+    "🧠 StealABrainrot",
+    "☁️ AstraCloud",
+}
+
+local tabButtons = {}
+local tabPages = {}
+
+-- Clear all children in tab content frame
+local function clearTabContent()
+    for _, child in pairs(TabContentFrame:GetChildren()) do
+        if not child:IsA("UIListLayout") then
+            child:Destroy()
         end
     end)
+    end
+end
 
-    -- WalkSpeed Slider
-    local walkSlider = CreateSlider(UtilityTab, "Walk Speed", 16, 500, WalkSpeedValue, function(v)
-        WalkSpeedValue = math.floor(v)
-        if WalkSpeedEnabled then
     wsToggleFrame:GetChildren()[2].MouseButton1Click:Connect(function()
         walkSpeedToggleState = not walkSpeedToggleState
         if walkSpeedToggleState then
             local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             if humanoid then
-                humanoid.WalkSpeed = WalkSpeedValue
                 humanoid.WalkSpeed = walkSpeedVal
             end
         else
@@ -666,76 +667,112 @@ do
             if humanoid then
                 humanoid.WalkSpeed = 16
             end
-        end
-    end)
-    AddToUtility(walkSlider)
+-- Create Tab Buttons
+for i, tabName in ipairs(tabs) do
+    local btn = Instance.new("TextButton")
+    btn.Name = "TabButton_"..i
+    btn.Size = UDim2.new(1, -10, 0, 30)
+    btn.BackgroundColor3 = Color3.fromRGB(88, 44, 155)
+    btn.BorderSizePixel = 0
+    btn.TextColor3 = Color3.fromRGB(255, 215, 0)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 16
+    btn.Text = tabName
+    btn.Parent = TabsFrame
+    tabButtons[tabName] = btn
 
-    -- JumpPower Slider
-    local jumpSlider = CreateSlider(UtilityTab, "Jump Power", 50, 500, JumpPowerValue, function(v)
-        JumpPowerValue = math.floor(v)
-        if JumpPowerEnabled then
+    btn.MouseButton1Click:Connect(function()
+        clearTabContent()
+        tabPages[tabName]()
+        -- Highlight active tab
+        for _, b in pairs(tabButtons) do
+            b.BackgroundColor3 = Color3.fromRGB(88, 44, 155)
+        end
+        btn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+    end)
+end
+
     -- JumpPower Slider + Toggle
     local jumpPowerVal = 100
     local jumpPowerToggleState = false
     local jpFrame, jpCallbackSetter = CreateSlider(tab, "JumpPower", 50, 500, 100)
     jpFrame.Position = UDim2.new(0, 10, 0, y)
     y = y + jpFrame.Size.Y.Offset + 10
+-- ========== Tab Logic Functions ==========
 
     local jpToggleFrame, jpToggleGetter, jpToggleSetter = CreateToggle(tab, "Set JumpPower", false)
     jpToggleFrame.Position = UDim2.new(0, 10, 0, y)
     y = y + jpToggleFrame.Size.Y.Offset + 10
+-- Utility Tab
+tabPages["🏠 Utility"] = function()
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 1, 0)
+    container.BackgroundTransparency = 1
+    container.Parent = TabContentFrame
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = container
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    -- Click Teleport Toggle
+    createToggle("Click Teleport", container, states.clickTPOn, function(toggled)
+        states.clickTPOn = toggled
+    end)
 
     jpCallbackSetter(function(value)
         jumpPowerVal = math.floor(value)
         if jumpPowerToggleState then
             local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             if humanoid then
-                humanoid.UseJumpPower = true
-                humanoid.JumpPower = JumpPowerValue
                 humanoid.JumpPower = jumpPowerVal
             end
+    -- Infinite Jump Toggle
+    createToggle("Infinite Jump", container, states.InfJump, function(toggled)
+        states.InfJump = toggled
+    end)
+
+    -- WalkSpeed Slider
+    createSlider("WalkSpeed", container, 16, 100, states.WalkSpeedValue, function(value)
+        states.WalkSpeedValue = value
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.WalkSpeed = value
         end
     end)
-    AddToUtility(jumpSlider)
 
-    -- WalkSpeed Enable Toggle
-    local walkSpeedToggle, _, setWalkSpeed = CreateToggle(UtilityTab, "Enable WalkSpeed", false, function(v)
-        WalkSpeedEnabled = v
-        if WalkSpeedEnabled then
     jpToggleFrame:GetChildren()[2].MouseButton1Click:Connect(function()
         jumpPowerToggleState = not jumpPowerToggleState
         if jumpPowerToggleState then
             local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             if humanoid then
-                humanoid.WalkSpeed = WalkSpeedValue
                 humanoid.JumpPower = jumpPowerVal
             end
         else
             local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             if humanoid then
-                humanoid.WalkSpeed = 16
                 humanoid.JumpPower = 50
             end
+    -- JumpPower Slider
+    createSlider("JumpPower", container, 50, 250, states.JumpPowerValue, function(value)
+        states.JumpPowerValue = value
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.JumpPower = value
         end
     end)
-    AddToUtility(walkSpeedToggle)
 
-    -- JumpPower Enable Toggle
-    local jumpPowerToggle, _, setJumpPower = CreateToggle(UtilityTab, "Enable JumpPower", false, function(v)
-        JumpPowerEnabled = v
-        if JumpPowerEnabled then
-            local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.UseJumpPower = true
-                humanoid.JumpPower = JumpPowerValue
     -- Noclip Toggle
     local noclipState = false
     local noclipToggleFrame, noclipToggleGetter, noclipToggleSetter = CreateToggle(tab, "Noclip", false)
     noclipToggleFrame.Position = UDim2.new(0, 10, 0, y)
     y = y + noclipToggleFrame.Size.Y.Offset + 10
+    createToggle("Noclip", container, states.noclipActive, function(toggled)
+        states.noclipActive = toggled
+    end)
 
     noclipToggleFrame:GetChildren()[2].MouseButton1Click:Connect(function()
         noclipState = not noclipState
+    -- ESP Toggle
+    createToggle("ESP", container, states.ESPOn, function(toggled)
+        states.ESPOn = toggled
     end)
 
     RunService.Stepped:Connect(function()
@@ -745,11 +782,6 @@ do
                     part.CanCollide = false
                 end
             end
-        else
-            local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.UseJumpPower = true
-                humanoid.JumpPower = 100
         elseif LocalPlayer.Character then
             for _, part in pairs(LocalPlayer.Character:GetChildren()) do
                 if part:IsA("BasePart") and not part.CanCollide then
@@ -757,18 +789,31 @@ do
                 end
             end
         end
+    -- Line ESP Toggle
+    createToggle("Line ESP", container, states.LineESP, function(toggled)
+        states.LineESP = toggled
     end)
-    AddToUtility(jumpPowerToggle)
+end
 
-    -- Anti AFK Button
-    local antiAfkBtn = CreateButton(UtilityTab, "Anti-AFK", function()
-        for _, conn in pairs(getconnections(LocalPlayer.Idled)) do
-            conn:Disable()
     -- Infinite Zoom Toggle
     local infiniteZoomState = false
     local infZoomToggleFrame, infZoomToggleGetter, infZoomToggleSetter = CreateToggle(tab, "Infinite Zoom", false)
     infZoomToggleFrame.Position = UDim2.new(0, 10, 0, y)
     y = y + infZoomToggleFrame.Size.Y.Offset + 10
+-- Troll Tab
+tabPages["💣 Troll"] = function()
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 1, 0)
+    container.BackgroundTransparency = 1
+    container.Parent = TabContentFrame
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = container
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    createToggle("Anti Grab", container, states.antiGrabEnabled, function(toggled)
+        states.antiGrabEnabled = toggled
+    end)
 
     infZoomToggleFrame:GetChildren()[2].MouseButton1Click:Connect(function()
         infiniteZoomState = not infiniteZoomState
@@ -777,23 +822,23 @@ do
         else
             Camera.MaxZoomDistance = 400 -- default typical max zoom
         end
+    createToggle("Spawn Kill All", container, states.spawnKillAll, function(toggled)
+        states.spawnKillAll = toggled
     end)
-    antiAfkBtn.Position = UDim2.new(0, 10, 0, yPos)
-    antiAfkBtn.Parent = UtilityTab
-    yPos = yPos + antiAfkBtn.Size.Y.Offset + 10
+
+    createToggle("Fling All", container, states.flingAll, function(toggled)
+        states.flingAll = toggled
+    end)
+
+    createSlider("Fling Strength", container, 100, 500, states.flingStrength, function(value)
+        states.flingStrength = value
+    end)
 end
 
--- AstraCloud Tab Features
 -- ============================
 -- TSB Tab Logic (The Strongest Battlegrounds Autofarm etc)
 -- ============================
 do
-    local yPos = 5
-    local function AddToAstra(element)
-        element.Position = UDim2.new(0, 10, 0, yPos)
-        element.Parent = AstraCloudTab
-        yPos = yPos + element.Size.Y.Offset + 10
-    end
     local tab = tabContents["TSB"]
     local y = 10
 
@@ -830,29 +875,21 @@ do
                         end
                     end
                 end
+-- Auto Tab
+tabPages["🤖 Auto"] = function()
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 1, 0)
+    container.BackgroundTransparency = 1
+    container.Parent = TabContentFrame
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = container
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
 
-    -- Variables for toggles
-    local anticheatBypass = false
-    local adminDetection = false
-    local infiniteZoom = false
-    local noclipEnabled = false
-    local autoStealBrainrot = false
-    local serverCrasher = false
+    createToggle("Autofarm TSB", container, states.autofarmEnabled, function(toggled)
+        states.autofarmEnabled = toggled
+    end)
 
-    -- Admin/Exploiter Detection Toggle (Fake log scanning example)
-    local adminDetToggle, _, setAdminDet = CreateToggle(AstraCloudTab, "Admin/Exploiter Detection", false, function(enabled)
-        adminDetection = enabled
-        if adminDetection then
-            spawn(function()
-                while adminDetection do
-                    -- Fake detection simulation, replace with actual log scanning if possible
-                    local suspicious = math.random(1, 500) == 1
-                    if suspicious then
-                        game:GetService("StarterGui"):SetCore("SendNotification", {
-                            Title = "AstraCloud",
-                            Text = "Suspicious Admin/Exploit detected! WATCH OUT!",
-                            Duration = 3,
-                        })
                 -- find closest enemy
                 local closestDist = math.huge
                 local closestEnemy = nil
@@ -868,50 +905,16 @@ do
                             end
                         end
                     end
-                    task.wait(5)
                 end
-            end)
-        end
+    createToggle("Auto Shoot", container, states.AutoShoot, function(toggled)
+        states.AutoShoot = toggled
     end)
-    AddToAstra(adminDetToggle)
 
-    -- Anticheat Bypass Toggle
-    local anticheatToggle, _, setAntiCheat = CreateToggle(AstraCloudTab, "Advanced Anticheat Bypass", false, function(enabled)
-        anticheatBypass = enabled
-        if anticheatBypass then
-            -- Example disabling of some anti-cheat scripts or detection flags, replace with actual code per game
-            game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "AstraCloud",
-                Text = "Anticheat Bypass Enabled",
-                Duration = 2,
-            })
-            -- Example dummy code - you add your real bypass logic here
-        else
-            game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "AstraCloud",
-                Text = "Anticheat Bypass Disabled",
-                Duration = 2,
-            })
-        end
-    end)
-    AddToAstra(anticheatToggle)
-
-    -- Infinite Zoom Toggle
-    local camera = workspace.CurrentCamera
-    local infiniteZoomToggle, _, setInfiniteZoom = CreateToggle(AstraCloudTab, "Infinite Zoom", false, function(enabled)
-        infiniteZoom = enabled
-        if infiniteZoom then
-            spawn(function()
-                while infiniteZoom do
                 if closestEnemy then
                     -- Teleport near enemy
                     pcall(function()
-                        camera.CameraType = Enum.CameraType.Custom
-                        camera.CameraMinZoomDistance = 0.1
-                        camera.CameraMaxZoomDistance = 5000
                         LocalPlayer.Character.HumanoidRootPart.CFrame = closestEnemy.HumanoidRootPart.CFrame * CFrame.new(0, 3, 3)
                     end)
-                    task.wait(0.1)
                     -- Attack enemy
                     if attackRemote then
                         pcall(function()
@@ -919,22 +922,10 @@ do
                         end)
                     end
                 end
-            end)
-        else
-            pcall(function()
-                camera.CameraMinZoomDistance = 0.5
-                camera.CameraMaxZoomDistance = 400
-            end)
-        end
+    createToggle("Team Check", container, states.TeamCheck, function(toggled)
+        states.TeamCheck = toggled
     end)
-    AddToAstra(infiniteZoomToggle)
 
-    -- Noclip Toggle
-    local function noclipLoop()
-        if noclipEnabled and LocalPlayer.Character then
-            for _, part in pairs(LocalPlayer.Character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
                 -- SafeFly logic
                 if safeflyGetter() then
                     pcall(function()
@@ -945,63 +936,21 @@ do
                 -- wait a bit
                 task.wait(1)
             end
-        end
-    end
-
-    local noclipToggle, _, setNoclip = CreateToggle(AstraCloudTab, "Noclip", false, function(enabled)
-        noclipEnabled = enabled
-        if noclipEnabled then
-            game:GetService("RunService").Stepped:Connect(noclipLoop)
-        end
-    end)
-    AddToAstra(noclipToggle)
-
-    -- Auto Steal Brainrot Toggle (fake example)
-    local autoStealToggle, _, setAutoSteal = CreateToggle(AstraCloudTab, "Auto Steal Brainrot", false, function(enabled)
-        autoStealBrainrot = enabled
-        if autoStealBrainrot then
-            game:GetService("RunService").Stepped:Connect(function()
-                if autoStealBrainrot then
-                    -- Put your stealing logic here (fake example)
-                    -- print("Auto Stealing Brainrot...")
-                end
-            end)
             task.wait(0.5)
         end
+    createDropdown("Target Part", container, {"Head", "HumanoidRootPart"}, states.TargetPart, function(value)
+        states.TargetPart = value
     end)
-    AddToAstra(autoStealToggle)
 
-    -- Server Crasher Toggle (Basic dummy example)
-    local serverCrashToggle, _, setServerCrash = CreateToggle(AstraCloudTab, "Server Crasher", false, function(enabled)
-        serverCrasher = enabled
-        if serverCrasher then
-            -- Dummy server crash logic (spam join/leave or heavy loop) - WARNING: Can kick you!
-            spawn(function()
-                while serverCrasher do
-                    -- Your server crash logic here (be responsible!)
-                    task.wait(1)
-                end
-            end)
-        end
+    createSlider("Aim FOV", container, 10, 180, states.AimFOV, function(value)
+        states.AimFOV = value
     end)
-    AddToAstra(serverCrashToggle)
 end
 
--- FTAP Tab - Basic grab/release + fling toggles (dummy example)
 -- ============================
 -- FTAP Tab Logic (Grab + Fling)
 -- ============================
 do
-    local yPos = 5
-    local function AddToFTAP(element)
-        element.Position = UDim2.new(0, 10, 0, yPos)
-        element.Parent = FTAPTab
-        yPos = yPos + element.Size.Y.Offset + 10
-    end
-
-    local grabToggle, _, _ = CreateToggle(FTAPTab, "Enable Grab", false, function(enabled)
-        if enabled then
-            -- Your grab logic here
     local tab = tabContents["FTAP"]
     local y = 10
 
@@ -1045,7 +994,6 @@ do
                 end
             end
         else
-            -- Disable grab logic
             if grabbedPlayer then
                 if releaseRemote then
                     pcall(function()
@@ -1061,29 +1009,47 @@ do
                 grabbedPlayer = nil
             end
         end
-    end)
-    AddToFTAP(grabToggle)
+-- Remotes Tab (example placeholder)
+tabPages["📡 Remotes"] = function()
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 1, 0)
+    container.BackgroundTransparency = 1
+    container.Parent = TabContentFrame
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = container
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
 
-    local releaseToggle, _, _ = CreateToggle(FTAPTab, "Delete Player On Release", false, function(enabled)
-        if enabled then
-            -- Your delete player logic on grab release
-        end
+    createButton("Dump Remotes", container, function()
+        print("Dumping remotes... (placeholder)")
     end)
-    AddToFTAP(releaseToggle)
-    -- Fling logic can be added based on velocity manipulation on grabbed target (complex, simplified here)
 end
 
--- TSB Tab - Autofarm toggle and settings (dummy example)
+    -- Fling logic can be added based on velocity manipulation on grabbed target (complex, simplified here)
+-- Visual Tab
+tabPages["🎯 Visual"] = function()
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 1, 0)
+    container.BackgroundTransparency = 1
+    container.Parent = TabContentFrame
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = container
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    createToggle("ESP", container, states.ESPOn, function(toggled)
+        states.ESPOn = toggled
+    end)
+
+    createToggle("Line ESP", container, states.LineESP, function(toggled)
+        states.LineESP = toggled
+    end)
+end
+
 -- ============================
 -- BloxFruits Tab Logic (Scaffold + autofarm)
 -- ============================
 do
-    local yPos = 5
-    local function AddToTSB(element)
-        element.Position = UDim2.new(0, 10, 0, yPos)
-        element.Parent = TSBTab
-        yPos = yPos + element.Size.Y.Offset + 10
-    end
     local tab = tabContents["BloxFruits"]
     local y = 10
 
@@ -1114,12 +1080,21 @@ do
                         end
                     end
                 end
+-- Exploits Tab
+tabPages["⚠️ Exploits"] = function()
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 1, 0)
+    container.BackgroundTransparency = 1
+    container.Parent = TabContentFrame
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = container
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
 
-    local autofarmToggle, _, _ = CreateToggle(TSBTab, "Autofarm", false, function(enabled)
-        if enabled then
-            -- Your autofarm logic here
-        else
-            -- Disable autofarm logic
+    createToggle("Infinite Jump", container, states.InfJump, function(toggled)
+        states.InfJump = toggled
+    end)
+
                 -- Find closest enemy
                 local closestDist = math.huge
                 local closestEnemy = nil
@@ -1136,6 +1111,9 @@ do
                         end
                     end
                 end
+    createToggle("Noclip", container, states.noclipActive, function(toggled)
+        states.noclipActive = toggled
+    end)
 
                 if closestEnemy then
                     pcall(function()
@@ -1150,25 +1128,19 @@ do
             end
             task.wait(0.7)
         end
+    createToggle("Godmode", container, states.godmodeActive, function(toggled)
+        states.godmodeActive = toggled
     end)
-    AddToTSB(autofarmToggle)
+
+    createToggle("Unlimited Zoom", container, states.unlimitedZoom, function(toggled)
+        states.unlimitedZoom = toggled
+    end)
 end
 
--- BloxFruits Tab (scaffolded)
 -- ============================
 -- Steal A Brainrot Tab Logic (Anticheat bypass + auto steal)
 -- ============================
 do
-    local yPos = 5
-    local function AddToBlox(element)
-        element.Position = UDim2.new(0, 10, 0, yPos)
-        element.Parent = BloxFruitsTab
-        yPos = yPos + element.Size.Y.Offset + 10
-    end
-
-    local autofarmToggle, _, _ = CreateToggle(BloxFruitsTab, "BloxFruits Autofarm", false, function(enabled)
-        if enabled then
-            -- Your BloxFruits autofarm logic here
     local tab = tabContents["StealABrainrot"]
     local y = 10
 
@@ -1204,22 +1176,21 @@ do
             end
             task.wait(2)
         end
+-- FTAP Tab (Grab & Fling)
+tabPages["👐 FTAP"] = function()
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 1, 0)
+    container.BackgroundTransparency = 1
+    container.Parent = TabContentFrame
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = container
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    createToggle("Enable Grab & Fling", container, states.flingEnabled, function(toggled)
+        states.flingEnabled = toggled
     end)
-    AddToBlox(autofarmToggle)
-end
 
--- SAB Tab - Steal a Brainrot (dummy scaffold)
-do
-    local yPos = 5
-    local function AddToSAB(element)
-        element.Position = UDim2.new(0, 10, 0, yPos)
-        element.Parent = SABTab
-        yPos = yPos + element.Size.Y.Offset + 10
-    end
-
-    local stealToggle, _, _ = CreateToggle(SABTab, "Enable Steal", false, function(enabled)
-        if enabled then
-            -- Your stealing logic here
     -- Auto steal logic placeholder
     spawn(function()
         while true do
@@ -1229,24 +1200,15 @@ do
             end
             task.wait(1)
         end
+    createSlider("Fling Strength", container, 100, 500, states.flingStrength, function(value)
+        states.flingStrength = value
     end)
-    AddToSAB(stealToggle)
 end
 
--- Remotes Tab - Dummy buttons example
 -- ============================
 -- AstraCloud Tab Logic (Admin detect, anticheat bypass, infinite zoom, server crasher)
 -- ============================
 do
-    local yPos = 5
-    local function AddToRemotes(element)
-        element.Position = UDim2.new(0, 10, 0, yPos)
-        element.Parent = RemoteTab
-        yPos = yPos + element.Size.Y.Offset + 10
-    end
-
-    local exampleBtn = CreateButton(RemoteTab, "Remote Example", function()
-        -- Fire a remote event example
     local tab = tabContents["AstraCloud"]
     local y = 10
 
@@ -1294,20 +1256,21 @@ do
             end
             task.wait(10)
         end
-    end)
-    exampleBtn.Position = UDim2.new(0, 10, 0, yPos)
-    exampleBtn.Parent = RemoteTab
-    yPos = yPos + exampleBtn.Size.Y.Offset + 10
-end
+-- TSB Tab (The Strongest Battlegrounds Autofarm + Aimbot)
+tabPages["⚔️ TSB"] = function()
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 1, 0)
+    container.BackgroundTransparency = 1
+    container.Parent = TabContentFrame
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = container
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Visual Tab - Dummy example
-do
-    local yPos = 5
-    local function AddToVisual(element)
-        element.Position = UDim2.new(0, 10, 0, yPos)
-        element.Parent = VisualTab
-        yPos = yPos + element.Size.Y.Offset + 10
-    end
+    createToggle("Autofarm", container, states.autofarmEnabled, function(toggled)
+        states.autofarmEnabled = toggled
+    end)
+
     -- Advanced Anticheat Bypass hook (example)
     spawn(function()
         while true do
@@ -1327,10 +1290,10 @@ do
             end
             task.wait(2)
         end
+    createToggle("Aimbot", container, states.AimbotOn, function(toggled)
+        states.AimbotOn = toggled
     end)
 
-    local espToggle, _, _ = CreateToggle(VisualTab, "Enable ESP", false, function(enabled)
-        -- ESP Logic here
     -- Godmode (basic example: intercept damage)
     local godmodeActive = false
     godmodeToggle:GetChildren()[2].MouseButton1Click:Connect(function()
@@ -1347,18 +1310,10 @@ do
                 end
             end
         end
+    createDropdown("Target Part", container, {"Head", "HumanoidRootPart"}, states.TargetPart, function(value)
+        states.TargetPart = value
     end)
-    AddToVisual(espToggle)
-end
 
--- Exploits Tab - Dummy example
-do
-    local yPos = 5
-    local function AddToExploits(element)
-        element.Position = UDim2.new(0, 10, 0, yPos)
-        element.Parent = ExploitsTab
-        yPos = yPos + element.Size.Y.Offset + 10
-    end
     -- Instant Kill (trigger remote to kill target instantly)
     instantKillToggle:GetChildren()[2].MouseButton1Click:Connect(function()
         if instantKillToggle:GetChildren()[2].Text == "ON" then
@@ -1366,29 +1321,39 @@ do
             -- Placeholder for instant kill logic:
             print("Instant Kill enabled. Use autofarm or attacks to apply.")
         end
+    createSlider("Aim FOV", container, 10, 180, states.AimFOV, function(value)
+        states.AimFOV = value
     end)
+end
 
-    local flyToggle, _, _ = CreateToggle(ExploitsTab, "Fly", false, function(enabled)
-        -- Fly logic here
     -- Infinite Zoom
     infiniteZoomToggle:GetChildren()[2].MouseButton1Click:Connect(function()
         if infiniteZoomToggle:GetChildren()[2].Text == "ON" then
             Camera.MaxZoomDistance = math.huge
         else
             Camera.MaxZoomDistance = 400
+-- BloxFruits Tab (Basic autofarm + speed)
+tabPages["🍉 BloxFruits"] = function()
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 1, 0)
+    container.BackgroundTransparency = 1
+    container.Parent = TabContentFrame
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = container
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    createToggle("Autofarm", container, false, function(toggled)
+        states.bloxAutofarm = toggled
+    end)
+
+    createSlider("WalkSpeed", container, 16, 100, 16, function(value)
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.WalkSpeed = value
         end
     end)
-    AddToExploits(flyToggle)
 end
 
--- Troll Tab - Dummy example
-do
-    local yPos = 5
-    local function AddToTroll(element)
-        element.Position = UDim2.new(0, 10, 0, yPos)
-        element.Parent = TrollTab
-        yPos = yPos + element.Size.Y.Offset + 10
-    end
     -- Server Crasher (dangerous - flooding remotes)
     spawn(function()
         while true do
@@ -1404,18 +1369,127 @@ do
                 task.wait(5)
             else
                 task.wait(1)
+-- Steal A Brainrot Tab
+tabPages["🧠 StealABrainrot"] = function()
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 1, 0)
+    container.BackgroundTransparency = 1
+    container.Parent = TabContentFrame
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = container
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    createToggle("Enable Anticheat Bypass", container, states.sabActive, function(toggled)
+        states.sabActive = toggled
+    end)
+
+    createButton("Run SAB Script", container, function()
+        -- Place your actual SAB loadstring or logic here
+        print("Running SAB script...")
+    end)
+end
+
+-- AstraCloud Tab (Admin detection, anticheat bypass, godmode, server crasher, etc)
+tabPages["☁️ AstraCloud"] = function()
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 1, 0)
+    container.BackgroundTransparency = 1
+    container.Parent = TabContentFrame
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = container
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    createToggle("Anticheat Bypass", container, states.anticheatBypassActive, function(toggled)
+        states.anticheatBypassActive = toggled
+    end)
+
+    createToggle("Godmode", container, states.godmodeActive, function(toggled)
+        states.godmodeActive = toggled
+    end)
+
+    createToggle("Unlimited Zoom", container, states.unlimitedZoom, function(toggled)
+        states.unlimitedZoom = toggled
+    end)
+
+    createButton("Server Crasher", container, function()
+        -- Heavy flooding example
+        print("Server Crasher activated!")
+    end)
+
+    createButton("Command Logger", container, function()
+        print("Command Logger activated!")
+    end)
+
+    createButton("Script Injector Detection", container, function()
+        print("Script Injector Detection activated!")
+    end)
+end
+
+-- ========== Functionality Implementation ==========
+
+-- Teleport on click
+local mouse = LocalPlayer:GetMouse()
+mouse.Button1Down:Connect(function()
+    if states.clickTPOn then
+        local mousePos = mouse.Hit.p
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(mousePos + Vector3.new(0, 3, 0))
+        end
+    end
+end)
+
+-- Infinite jump
+UserInputService.JumpRequest:Connect(function()
+    if states.InfJump then
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+-- Noclip
+RunService.Stepped:Connect(function()
+    if states.noclipActive and LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide == true then
+                part.CanCollide = false
             end
         end
     end)
+    elseif LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide == false then
+                part.CanCollide = true
+            end
+        end
+    end
+end)
 
-    local trollToggle, _, _ = CreateToggle(TrollTab, "Troll Toggle", false, function(enabled)
-        -- Troll logic here
+-- ESP & Line ESP
+local function createHighlight(target)
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = target
+    highlight.FillColor = Color3.fromRGB(255, 215, 0)
+    highlight.FillTransparency = 0.6
+    highlight.OutlineColor = Color3.fromRGB(255, 215, 0)
+    highlight.Parent = target
+    return highlight
+end
+
     -- Noclip
     RunService.Stepped:Connect(function()
         if noclipGetter() and LocalPlayer.Character then
             for _, part in pairs(LocalPlayer.Character:GetChildren()) do
                 if part:IsA("BasePart") then
                     part.CanCollide = false
+RunService.Heartbeat:Connect(function()
+    if states.ESPOn then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                if not espObjects[player.Name] then
+                    espObjects[player.Name] = createHighlight(player.Character)
                 end
             end
         elseif LocalPlayer.Character then
@@ -1423,65 +1497,159 @@ do
                 if part:IsA("BasePart") then
                     part.CanCollide = true
                 end
+        end
+    else
+        for _, obj in pairs(espObjects) do
+            if obj and obj.Parent then
+                obj:Destroy()
             end
         end
     end)
-    AddToTroll(trollToggle)
+        espObjects = {}
+    end
+end)
+
+-- Autofarm + Aimbot for TSB example
+local function isEnemy(player)
+    if not states.TeamCheck then
+        return true
+    end
+    if LocalPlayer.Team and player.Team then
+        return LocalPlayer.Team ~= player.Team
+    end
+    return true
 end
 
--- Minimize button functionality
-MinimizeBtn.MouseButton1Click:Connect(function()
-    if MainFrame.Visible then
-        MainFrame.Visible = false
-        MinimizedFrame.Visible = true
-    end
-end)
-
--- Clicking minimized restores main GUI
-MinimizedFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        MainFrame.Visible = true
-        MinimizedFrame.Visible = false
-    end
-end)
-
--- Close button unloads GUI
-CloseBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
 -- ============================
 -- Helper Functions
 -- ============================
+local function getClosestTarget()
+    local closest = nil
+    local distClosest = math.huge
+    local mousePos = UserInputService:GetMouseLocation()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(states.TargetPart) then
+            if isEnemy(player) then
+                local part = player.Character[states.TargetPart]
+                local screenPoint, onScreen = Camera:WorldToViewportPoint(part.Position)
+                if onScreen then
+                    local dist = (Vector2.new(mousePos.X, mousePos.Y) - Vector2.new(screenPoint.X, screenPoint.Y)).Magnitude
+                    if dist < distClosest and dist < states.AimFOV then
+                        distClosest = dist
+                        closest = player
+                    end
+                end
+            end
+        end
+    end
+    return closest
+end
 
--- Character respawn hook to reset WalkSpeed and JumpPower if enabled
-LocalPlayer.CharacterAdded:Connect(function(char)
-    task.wait(1)
-    if WalkSpeedEnabled then
-        local humanoid = char:WaitForChild("Humanoid")
-        if humanoid then
-            humanoid.WalkSpeed = WalkSpeedValue
 -- Find remote by name heuristics in ReplicatedStorage or Workspace
 function FindRemote(name)
     for _, obj in pairs(ReplicatedStorage:GetDescendants()) do
         if obj.Name == name and (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) then
             return obj
+RunService.Heartbeat:Connect(function()
+    -- Autofarm example for TSB (basic targeting)
+    if states.autofarmEnabled then
+        local target = getClosestTarget()
+        if target and target.Character and target.Character:FindFirstChild(states.TargetPart) then
+            -- Example attack logic (needs adaptation to actual remote)
+            print("Auto-attacking " .. target.Name)
+            -- Add your remote calls for TSB attack here
         end
     end
-    if JumpPowerEnabled then
-        local humanoid = char:WaitForChild("Humanoid")
-        if humanoid then
-            humanoid.UseJumpPower = true
-            humanoid.JumpPower = JumpPowerValue
     for _, obj in pairs(Workspace:GetDescendants()) do
         if obj.Name == name and (obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction")) then
             return obj
+
+    -- Aimbot
+    if states.AimbotOn and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local target = getClosestTarget()
+        if target and target.Character and target.Character:FindFirstChild(states.TargetPart) then
+            local targetPos = target.Character[states.TargetPart].Position
+            local hrp = LocalPlayer.Character.HumanoidRootPart
+            local camCF = Camera.CFrame
+            local newCF = CFrame.new(camCF.Position, targetPos)
+            Camera.CFrame = newCF
         end
     end
-end)
     return nil
+end)
+
+-- FTAP Grab & Fling Logic (simplified)
+-- Replace remote names with actual game remotes
+local FTAPRemote = nil
+pcall(function()
+    -- Try to find remote
+    FTAPRemote = game:GetService("ReplicatedStorage"):WaitForChild("GrabRemote", 5)
+end)
+
+local grabbedPlayer = nil
+local function flingPlayer(targetPlayer)
+    if not targetPlayer or not targetPlayer.Character then return end
+    local hrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    -- fling logic, example applying BodyVelocity or remote calls
+    print("Flinging player: " .. targetPlayer.Name)
+    -- Use actual fling remote or BodyVelocity here
 end
 
--- Done! Nebula Hub fully loaded and functional.
 -- =============== End of Nebula Hub Universal Script ===============
+-- This is placeholder - actual FTAP grab logic involves detecting grab events, etc.
+RunService.Heartbeat:Connect(function()
+    if states.flingEnabled and grabbedPlayer then
+        flingPlayer(grabbedPlayer)
+    end
+end)
 
-print("Nebula Hub Universal Loaded")
+-- SAB (Steal A Brainrot) Anticheat Bypass (placeholder)
+if states.sabActive then
+    -- Run SAB bypass loadstring or inject code here
+    print("SAB Anticheat bypass active.")
+end
+
+-- AstraCloud Anticheat Bypass (placeholder)
+if states.anticheatBypassActive then
+    -- Implement advanced anticheat bypasses here
+    print("AstraCloud anticheat bypass active.")
+end
+
+-- Unlimited Zoom Logic
+UserInputService.InputChanged:Connect(function(input)
+    if states.unlimitedZoom and input.UserInputType == Enum.UserInputType.MouseWheel then
+        local newDist = Camera.CameraSubject and Camera.CameraSubject.Focus.Position or Camera.CFrame.Position
+        Camera.FieldOfView = math.clamp(Camera.FieldOfView - input.Position.Z * 3, 5, 120)
+    end
+end)
+
+-- Minimize/Close Logic
+local minimized = false
+
+MinimizeButton.MouseButton1Click:Connect(function()
+    if minimized then
+        MainFrame.Visible = true
+        MinimizedBar.Visible = false
+        minimized = false
+    else
+        MainFrame.Visible = false
+        MinimizedBar.Visible = true
+        minimized = true
+    end
+end)
+
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+MinimizedBar.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true
+    MinimizedBar.Visible = false
+    minimized = false
+end)
+
+-- Select first tab by default
+tabButtons[tabs[1]]:MouseButton1Click()
+
+print("Nebula Hub Universal Fully Loaded with all features!")

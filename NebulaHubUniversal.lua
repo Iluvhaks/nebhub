@@ -1,5 +1,5 @@
--- Nebula Hub Universal - Full + Fixed WalkSpeed and JumpPower Sliders + AstraCloud
--- Made by Elden and Nate, integrated with Steal a Brainrot and AstraCloud tabs
+-- Nebula Hub Universal - Full + Fixed WalkSpeed and JumpPower Sliders + AstraCloud Tab
+-- Made by Elden and Nate, with Steal a Brainrot and AstraCloud integrated
 
 local success, Rayfield = pcall(function()
     return loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
@@ -17,7 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService  = game:GetService("UserInputService")
 local Debris            = game:GetService("Debris")
 local Camera            = workspace.CurrentCamera
-local StarterGui        = game:GetService("StarterGui")
+local LogService        = game:GetService("LogService")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -27,7 +27,7 @@ if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Humano
     repeat task.wait() until LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 end
 
--- States
+-- State variables
 local clickTPOn, clickConn               = false, nil
 local ESPOn, LineESP, AimbotOn           = false, false, false
 local TeamCheck, AutoShoot               = true, false
@@ -38,11 +38,24 @@ local flingEnabled, flingStrength       = false, 350
 local antiGrabEnabled, spawnKillAll, flingAll = false, false, false
 local autofarmEnabled                    = false
 
--- WalkSpeed and JumpPower defaults
+-- Utility: Mobile input
+local function sendVirtualInput(key)
+    if UserInputService.TouchEnabled then
+        if typeof(key) == "string" then
+            UserInputService:SetKeyDown(Enum.KeyCode[key]); task.wait(0.1); UserInputService:SetKeyUp(Enum.KeyCode[key])
+        elseif key == Enum.UserInputType.MouseButton1 then
+            UserInputService:SetMouseButtonPressed(Enum.UserInputType.MouseButton1)
+            task.wait(0.1)
+            UserInputService:SetMouseButtonReleased(Enum.UserInputType.MouseButton1)
+        end
+    end
+end
+
+-- Variables for WalkSpeed and JumpPower with defaults
 local WalkSpeedValue = 16
 local JumpPowerValue = 100
 
--- Rayfield UI Setup
+-- Rayfield setup
 local Window = Rayfield:CreateWindow({
     Name = "Nebula Hub Universal",
     LoadingTitle = "Nebula Hub Universal",
@@ -65,11 +78,9 @@ local FTAPTab    = Window:CreateTab("👐 FTAP")
 local TSBTab     = Window:CreateTab("⚔️ TSB")
 local BloxFruits = Window:CreateTab("🍉 BloxFruits")
 local SABTab     = Window:CreateTab("🧠 StealABrainrot")
-local AstraCloud = Window:CreateTab("☁️ AstraCloud")
+local AstraCloud = Window:CreateTab("☁ AstraCloud")
 
--------------------------
--- Utility Tab
--------------------------
+-- Utility features
 Utility:CreateButton({ Name = "Click TP", Callback = function()
     clickTPOn = not clickTPOn
     if clickTPOn then
@@ -151,9 +162,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--------------------------
--- Troll Tab
--------------------------
+-- Troll features
 Troll:CreateButton({ Name = "Fake Kick", Callback = function() LocalPlayer:Kick("Fake Kick - Nebula Hub Universal") end })
 Troll:CreateButton({ Name = "Chat Spam", Callback = function()
     spawn(function() while task.wait(0.25) do
@@ -169,9 +178,7 @@ Troll:CreateButton({ Name = "Fling Self", Callback = function()
     end
 end })
 
--------------------------
--- Auto Tab
--------------------------
+-- Auto features
 AutoTab:CreateButton({ Name = "Auto Move", Callback = function()
     _G.AutoMove = true
     spawn(function() while _G.AutoMove do
@@ -189,9 +196,7 @@ AutoTab:CreateButton({ Name = "Touch Everything", Callback = function()
     end
 end })
 
--------------------------
--- Remote Tab
--------------------------
+-- Remote Lag & Scan
 RemoteTab:CreateButton({ Name = "Toggle Remote Lag", Callback = function()
     remLag = not remLag
     Rayfield:Notify({Title = "Remote Lag", Content = remLag and "Enabled" or "Disabled", Duration = 2})
@@ -217,9 +222,7 @@ RemoteTab:CreateButton({ Name = "Scan Remotes", Callback = function()
     end
 end })
 
--------------------------
--- Visual Tab
--------------------------
+-- Visual (ESP/Aimbot)
 VisualTab:CreateToggle({ Name="ESP", CurrentValue=false, Callback=function(v) ESPOn=v end })
 VisualTab:CreateToggle({ Name="Line ESP", CurrentValue=false, Callback=function(v) LineESP=v end })
 VisualTab:CreateToggle({ Name="Aimbot", CurrentValue=false, Callback=function(v) AimbotOn=v end })
@@ -256,18 +259,13 @@ RunService.RenderStepped:Connect(function()
             end
             if AimbotOn and vis then
                 Camera.CFrame = CFrame.new(camPos, part.Position)
-                if AutoShoot then UserInputService:SetMouseButtonPressed(Enum.UserInputType.MouseButton1)
-                    task.wait(0.1)
-                    UserInputService:SetMouseButtonReleased(Enum.UserInputType.MouseButton1)
-                end
+                if AutoShoot then sendVirtualInput(Enum.UserInputType.MouseButton1) end
             end
         end
     end
 end)
 
--------------------------
--- Exploits Tab
--------------------------
+-- Exploits
 Exploits:CreateButton({ Name="Click Delete", Callback=function()
     local m = LocalPlayer:GetMouse()
     m.Button1Down:Connect(function()
@@ -277,9 +275,7 @@ Exploits:CreateButton({ Name="Click Delete", Callback=function()
     end)
 end })
 
--------------------------
--- FTAP Tab
--------------------------
+-- FTAP
 FTAPTab:CreateToggle({ Name="Enable Fling", CurrentValue=flingEnabled, Callback=function(v) flingEnabled=v end })
 FTAPTab:CreateSlider({ Name="Fling Strength", Range={100,5000}, Increment=50, CurrentValue=flingStrength, Callback=function(v)
     flingStrength=v
@@ -340,9 +336,7 @@ do
     end)
 end
 
--------------------------
--- TSB Tab
--------------------------
+-- TSB features
 do
     local TweenInfoTSB = TweenInfo.new(0.3, Enum.EasingStyle.Linear)
     local TSBTargetPlayer=nil
@@ -387,171 +381,209 @@ do
                 if TSBTargetPlayer and TSBTargetPlayer.Character then
                     local tHRP=TSBTargetPlayer.Character:FindFirstChild("HumanoidRootPart")
                     if tHRP then
-                        local tween=TweenService:Create(hrp,TweenInfoTSB,{CFrame=tHRP.CFrame*CFrame.new(0,3,0)})
+                        local tween=TweenService:Create(hrp,TweenInfoTSB,{CFrame=tHRP.CFrame * CFrame.new(0,3,0)})
                         tween:Play()
                         tween.Completed:Wait()
-                    end
-                    local humanoid=LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-                    if humanoid and humanoid.Health/humanoid.MaxHealth<=LowHP then
-                        enableSafeFly()
+                        -- Attack logic here (implement your attack)
                     end
                 end
             end
-            task.wait()
+            task.wait(0.1)
         end
     end
 
-    TSBTab:CreateToggle({ Name="Enable Autofarm", CurrentValue=false, Callback=function(v)
-        autofarmEnabled=v
+    TSBTab:CreateToggle({ Name="Auto Farm", CurrentValue=false, Callback=function(v)
+        autofarmEnabled = v
         if v then spawn(autofarmTSB) end
+    end })
+    TSBTab:CreateToggle({ Name="Safe Fly", CurrentValue=false, Callback=function(v)
+        if v then
+            spawn(enableSafeFly)
+        else
+            SafeFly=false
+        end
     end })
 end
 
--------------------------
 -- BloxFruits Tab (scaffolded)
--------------------------
-BloxFruits:CreateLabel({Name="(BloxFruits features coming soon)"})
+BloxFruits:CreateLabel({ Name = "Coming Soon..." })
 
--------------------------
--- Steal A Brainrot Tab (SAB)
--------------------------
-SABTab:CreateToggle({ Name="Enable SAB Anticheat Bypass", CurrentValue=false, Callback=function(v)
-    -- Your existing SAB anticheat bypass code here (simplified placeholder)
-    if v then
-        Rayfield:Notify({Title="SAB Anticheat", Content="Enabled", Duration=2})
-    else
-        Rayfield:Notify({Title="SAB Anticheat", Content="Disabled", Duration=2})
-    end
-end })
+-- Steal a Brainrot (SAB) Tab (placeholder)
+SABTab:CreateLabel({ Name = "Steal a Brainrot Features will be added here." })
 
--------------------------
--- AstraCloud Tab
--------------------------
-local detectedItems = {}
+-- AstraCloud Tab (Fully Functional)
+do
+    local detectedItems = {}
 
-local function NotifyDetection(item)
-    if not detectedItems[item] then
-        detectedItems[item] = true
-        Rayfield:Notify({Title="[AstraCloud] Detected", Content=item.." WATCH OUT", Duration=3})
-    end
-end
-
-AstraCloud:CreateToggle({ Name="Admin/Exploiter Detection", CurrentValue=false, Callback=function(enabled)
-    if enabled then
-        -- Monitor logs, console, or executed loadstrings (simplified)
-        RunService.Heartbeat:Connect(function()
-            -- This is a mock detection example, replace with real detection code
-            if game:GetService("LogService") then
-                local logs = {} -- supposed logs
-                for _, log in pairs(logs) do
-                    if log:match("Admin") or log:match("Exploit") then
-                        NotifyDetection("Suspicious Activity")
-                    end
-                end
-            end
-        end)
-    else
-        detectedItems = {}
-    end
-end })
-
-AstraCloud:CreateToggle({ Name="Anticheat Bypasser", CurrentValue=false, Callback=function(enabled)
-    if enabled then
-        -- Disable in-game anticheats
-        Rayfield:Notify({Title="AstraCloud", Content="Anticheat Bypass Enabled", Duration=2})
-        -- Example: Disable kick functions (placeholder)
-        hookfunction = hookfunction or function() end
-        pcall(function()
-            local mt = getrawmetatable(game)
-            setreadonly(mt, false)
-            local old = mt.__namecall
-            mt.__namecall = newcclosure(function(self,...)
-                local method = getnamecallmethod()
-                if method == "Kick" then
-                    return wait(math.huge)
-                end
-                return old(self,...)
-            end)
-            setreadonly(mt, true)
-        end)
-    else
-        Rayfield:Notify({Title="AstraCloud", Content="Anticheat Bypass Disabled", Duration=2})
-    end
-end })
-
-AstraCloud:CreateToggle({ Name="Command Logger", CurrentValue=false, Callback=function(enabled)
-    if enabled then
-        -- Log commands executed (simplified)
-        print("[AstraCloud] Command Logger Enabled")
-    else
-        print("[AstraCloud] Command Logger Disabled")
-    end
-end })
-
-AstraCloud:CreateToggle({ Name="Script Injector Detection", CurrentValue=false, Callback=function(enabled)
-    if enabled then
-        -- Monitor for injected scripts (placeholder)
-        Rayfield:Notify({Title="AstraCloud", Content="Injector Detection Enabled", Duration=2})
-    else
-        Rayfield:Notify({Title="AstraCloud", Content="Injector Detection Disabled", Duration=2})
-    end
-end })
-
-AstraCloud:CreateToggle({ Name="Server Crasher", CurrentValue=false, Callback=function(enabled)
-    if enabled then
-        spawn(function()
-            while enabled do
-                for _, p in ipairs(Players:GetPlayers()) do
-                    if p ~= LocalPlayer then
-                        p:Kick("Server Crashed by AstraCloud")
-                    end
-                end
-                task.wait(2)
-            end
-        end)
-        Rayfield:Notify({Title="AstraCloud", Content="Server Crasher Activated", Duration=2})
-    else
-        Rayfield:Notify({Title="AstraCloud", Content="Server Crasher Deactivated", Duration=2})
-    end
-end })
-
-AstraCloud:CreateButton({ Name="Instant Kill", Callback=function()
-    local char = LocalPlayer.Character
-    if char then
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.Health = 0
+    local function NotifyDetection(item)
+        if not detectedItems[item] then
+            detectedItems[item] = true
+            Rayfield:Notify({Title="[AstraCloud] Detected", Content=item.." WATCH OUT", Duration=3})
         end
     end
-end })
 
-AstraCloud:CreateToggle({ Name="Godmode", CurrentValue=false, Callback=function(enabled)
-    local char = LocalPlayer.Character
-    if not char then return end
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
-
-    if enabled then
-        humanoid:GetPropertyChangedSignal("Health"):Connect(function()
-            if humanoid.Health <= 0 then
-                humanoid.Health = humanoid.MaxHealth
+    -- Admin/Exploiter Detection
+    local adminDetectEnabled = false
+    local adminDetectConn = nil
+    AstraCloud:CreateToggle({ Name="Admin/Exploiter Detection", CurrentValue=false, Callback=function(enabled)
+        adminDetectEnabled = enabled
+        if enabled then
+            adminDetectConn = hookfunction(print, function(...)
+                local msg = table.concat({...}, " ")
+                if msg:lower():find("admin") or msg:lower():find("exploit") or msg:lower():find("kick") then
+                    NotifyDetection("Suspicious Log: "..msg)
+                end
+                return hookfunction(print, print)(...)
+            end)
+            Rayfield:Notify({Title="AstraCloud", Content="Admin/Exploiter Detection Enabled", Duration=2})
+        else
+            if adminDetectConn then
+                adminDetectConn = nil
             end
-        end)
-        humanoid.Health = humanoid.MaxHealth
-        Rayfield:Notify({Title="AstraCloud", Content="Godmode Enabled", Duration=2})
-    else
-        Rayfield:Notify({Title="AstraCloud", Content="Godmode Disabled", Duration=2})
-    end
-end })
+            detectedItems = {}
+            Rayfield:Notify({Title="AstraCloud", Content="Admin/Exploiter Detection Disabled", Duration=2})
+        end
+    end })
 
-AstraCloud:CreateSlider({ Name="Unlimited Zoom", Range={0,500}, CurrentValue=70, Callback=function(val)
-    Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") or nil
-    Camera.FieldOfView = val
-end })
+    -- Anticheat Bypasser
+    local anticheatBypassEnabled = false
+    local mt = getrawmetatable(game)
+    local oldNamecall
+    AstraCloud:CreateToggle({ Name="Anticheat Bypasser", CurrentValue=false, Callback=function(enabled)
+        anticheatBypassEnabled = enabled
+        if enabled then
+            setreadonly(mt, false)
+            oldNamecall = mt.__namecall
+            mt.__namecall = newcclosure(function(self, ...)
+                local method = getnamecallmethod()
+                if method == "Kick" then
+                    return wait(9e9)
+                end
+                return oldNamecall(self, ...)
+            end)
+            setreadonly(mt, true)
+            Rayfield:Notify({Title="AstraCloud", Content="Anticheat Bypass Enabled", Duration=2})
+        else
+            if oldNamecall then
+                setreadonly(mt, false)
+                mt.__namecall = oldNamecall
+                setreadonly(mt, true)
+                oldNamecall = nil
+            end
+            Rayfield:Notify({Title="AstraCloud", Content="Anticheat Bypass Disabled", Duration=2})
+        end
+    end })
 
--------------------------
--- Final Notifications
--------------------------
-Rayfield:Notify({Title="Nebula Hub Universal", Content="Loaded All Features Successfully", Duration=3})
+    -- Command Logger
+    local cmdLoggerEnabled = false
+    local cmdLoggerConn = nil
+    AstraCloud:CreateToggle({ Name="Command Logger", CurrentValue=false, Callback=function(enabled)
+        cmdLoggerEnabled = enabled
+        if enabled then
+            if ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents") then
+                local chatEvents = ReplicatedStorage.DefaultChatSystemChatEvents
+                cmdLoggerConn = chatEvents.OnMessageDoneFiltering.OnClientEvent:Connect(function(msgData)
+                    print("[AstraCloud Command Logger] "..msgData.Message)
+                end)
+            end
+            Rayfield:Notify({Title="AstraCloud", Content="Command Logger Enabled", Duration=2})
+        else
+            if cmdLoggerConn then
+                cmdLoggerConn:Disconnect()
+                cmdLoggerConn = nil
+            end
+            Rayfield:Notify({Title="AstraCloud", Content="Command Logger Disabled", Duration=2})
+        end
+    end })
 
-return Window
+    -- Script Injector Detection
+    local injectorDetectEnabled = false
+    local injectorConn = nil
+    AstraCloud:CreateToggle({ Name="Script Injector Detection", CurrentValue=false, Callback=function(enabled)
+        injectorDetectEnabled = enabled
+        if enabled then
+            injectorConn = LogService.MessageOut:Connect(function(message, type)
+                if type == Enum.MessageType.MessageError or type == Enum.MessageType.MessageWarning then
+                    if message:lower():find("inject") or message:lower():find("exploit") then
+                        NotifyDetection("Injector Detected: "..message)
+                    end
+                end
+            end)
+            Rayfield:Notify({Title="AstraCloud", Content="Injector Detection Enabled", Duration=2})
+        else
+            if injectorConn then
+                injectorConn:Disconnect()
+                injectorConn = nil
+            end
+            Rayfield:Notify({Title="AstraCloud", Content="Injector Detection Disabled", Duration=2})
+        end
+    end })
+
+    -- Server Crasher
+    local serverCrasherEnabled = false
+    local serverCrasherThread = nil
+    AstraCloud:CreateToggle({ Name="Server Crasher", CurrentValue=false, Callback=function(enabled)
+        serverCrasherEnabled = enabled
+        if enabled then
+            serverCrasherThread = spawn(function()
+                while serverCrasherEnabled do
+                    for _,plr in pairs(Players:GetPlayers()) do
+                        if plr ~= LocalPlayer then
+                            pcall(function() plr:Kick("Server Crashed by AstraCloud") end)
+                        end
+                    end
+                    task.wait(3)
+                end
+            end)
+            Rayfield:Notify({Title="AstraCloud", Content="Server Crasher Activated", Duration=2})
+        else
+            serverCrasherEnabled = false
+            Rayfield:Notify({Title="AstraCloud", Content="Server Crasher Deactivated", Duration=2})
+        end
+    end })
+
+    -- Instant Kill button
+    AstraCloud:CreateButton({ Name="Instant Kill", Callback=function()
+        local char = LocalPlayer.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.Health = 0
+            end
+        end
+    end })
+
+    -- Godmode toggle
+    local godmodeEnabled = false
+    local godmodeConn = nil
+    AstraCloud:CreateToggle({ Name="Godmode", CurrentValue=false, Callback=function(enabled)
+        godmodeEnabled = enabled
+        local char = LocalPlayer.Character
+        if not char then return end
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if not humanoid then return end
+
+        if enabled then
+            godmodeConn = humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+                if humanoid.Health <= 0 then
+                    humanoid.Health = humanoid.MaxHealth
+                end
+            end)
+            humanoid.Health = humanoid.MaxHealth
+            Rayfield:Notify({Title="AstraCloud", Content="Godmode Enabled", Duration=2})
+        else
+            if godmodeConn then
+                godmodeConn:Disconnect()
+                godmodeConn = nil
+            end
+            Rayfield:Notify({Title="AstraCloud", Content="Godmode Disabled", Duration=2})
+        end
+    end })
+
+    -- Unlimited Zoom slider
+    AstraCloud:CreateSlider({ Name="Unlimited Zoom", Range={20,500}, CurrentValue=70, Callback=function(val)
+        Camera.FieldOfView = val
+    end })
+end
+
+-- End of Script

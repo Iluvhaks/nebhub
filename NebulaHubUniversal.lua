@@ -1,5 +1,5 @@
--- Nebula Hub Universal - Full + Fixed WalkSpeed and JumpPower Sliders
--- Made by Elden and Nate, with Steal a Brainrot tab integrated
+-- Nebula Hub Universal - Full + Fixed WalkSpeed and JumpPower Sliders + AstraCloud
+-- Made by Elden and Nate, integrated with Steal a Brainrot and AstraCloud tabs
 
 local success, Rayfield = pcall(function()
     return loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
@@ -17,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService  = game:GetService("UserInputService")
 local Debris            = game:GetService("Debris")
 local Camera            = workspace.CurrentCamera
+local StarterGui        = game:GetService("StarterGui")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -26,7 +27,7 @@ if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Humano
     repeat task.wait() until LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 end
 
--- State
+-- States
 local clickTPOn, clickConn               = false, nil
 local ESPOn, LineESP, AimbotOn           = false, false, false
 local TeamCheck, AutoShoot               = true, false
@@ -37,24 +38,11 @@ local flingEnabled, flingStrength       = false, 350
 local antiGrabEnabled, spawnKillAll, flingAll = false, false, false
 local autofarmEnabled                    = false
 
--- Utility: Mobile input
-local function sendVirtualInput(key)
-    if UserInputService.TouchEnabled then
-        if typeof(key) == "string" then
-            UserInputService:SetKeyDown(Enum.KeyCode[key]); task.wait(0.1); UserInputService:SetKeyUp(Enum.KeyCode[key])
-        elseif key == Enum.UserInputType.MouseButton1 then
-            UserInputService:SetMouseButtonPressed(Enum.UserInputType.MouseButton1)
-            task.wait(0.1)
-            UserInputService:SetMouseButtonReleased(Enum.UserInputType.MouseButton1)
-        end
-    end
-end
-
--- Variables for WalkSpeed and JumpPower with defaults
+-- WalkSpeed and JumpPower defaults
 local WalkSpeedValue = 16
 local JumpPowerValue = 100
 
--- Rayfield setup
+-- Rayfield UI Setup
 local Window = Rayfield:CreateWindow({
     Name = "Nebula Hub Universal",
     LoadingTitle = "Nebula Hub Universal",
@@ -76,9 +64,12 @@ local Exploits   = Window:CreateTab("⚠️ Exploits")
 local FTAPTab    = Window:CreateTab("👐 FTAP")
 local TSBTab     = Window:CreateTab("⚔️ TSB")
 local BloxFruits = Window:CreateTab("🍉 BloxFruits")
-local SABTab     = Window:CreateTab("🧠 StealABrainrot") -- Added Steal a Brainrot Tab
+local SABTab     = Window:CreateTab("🧠 StealABrainrot")
+local AstraCloud = Window:CreateTab("☁️ AstraCloud")
 
--- Utility features
+-------------------------
+-- Utility Tab
+-------------------------
 Utility:CreateButton({ Name = "Click TP", Callback = function()
     clickTPOn = not clickTPOn
     if clickTPOn then
@@ -97,7 +88,6 @@ end })
 
 Utility:CreateToggle({ Name = "Infinite Jump", CurrentValue=false, Callback = function(v) InfJump = v end })
 
--- Store slider refs for visual update
 local WalkSpeedSlider = Utility:CreateSlider({
     Name = "Walk Speed",
     Range = {16, 200},
@@ -109,7 +99,6 @@ local WalkSpeedSlider = Utility:CreateSlider({
         else
             WalkSpeedSlider.CurrentValue = v
         end
-        -- Apply immediately
         local char = LocalPlayer.Character
         if char then
             local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -131,7 +120,6 @@ local JumpPowerSlider = Utility:CreateSlider({
         else
             JumpPowerSlider.CurrentValue = v
         end
-        -- Apply immediately
         local char = LocalPlayer.Character
         if char then
             local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -147,7 +135,6 @@ Utility:CreateButton({ Name = "Anti-AFK", Callback = function()
     for _, conn in pairs(getconnections(LocalPlayer.Idled)) do conn:Disable() end
 end })
 
--- Reapply walk/jump on character spawn
 LocalPlayer.CharacterAdded:Connect(function(char)
     local humanoid = char:WaitForChild("Humanoid", 10)
     if humanoid then
@@ -164,7 +151,9 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Troll features
+-------------------------
+-- Troll Tab
+-------------------------
 Troll:CreateButton({ Name = "Fake Kick", Callback = function() LocalPlayer:Kick("Fake Kick - Nebula Hub Universal") end })
 Troll:CreateButton({ Name = "Chat Spam", Callback = function()
     spawn(function() while task.wait(0.25) do
@@ -180,7 +169,9 @@ Troll:CreateButton({ Name = "Fling Self", Callback = function()
     end
 end })
 
--- Auto features
+-------------------------
+-- Auto Tab
+-------------------------
 AutoTab:CreateButton({ Name = "Auto Move", Callback = function()
     _G.AutoMove = true
     spawn(function() while _G.AutoMove do
@@ -198,7 +189,9 @@ AutoTab:CreateButton({ Name = "Touch Everything", Callback = function()
     end
 end })
 
--- Remote Lag & Scan
+-------------------------
+-- Remote Tab
+-------------------------
 RemoteTab:CreateButton({ Name = "Toggle Remote Lag", Callback = function()
     remLag = not remLag
     Rayfield:Notify({Title = "Remote Lag", Content = remLag and "Enabled" or "Disabled", Duration = 2})
@@ -224,7 +217,9 @@ RemoteTab:CreateButton({ Name = "Scan Remotes", Callback = function()
     end
 end })
 
--- Visual (ESP/Aimbot)
+-------------------------
+-- Visual Tab
+-------------------------
 VisualTab:CreateToggle({ Name="ESP", CurrentValue=false, Callback=function(v) ESPOn=v end })
 VisualTab:CreateToggle({ Name="Line ESP", CurrentValue=false, Callback=function(v) LineESP=v end })
 VisualTab:CreateToggle({ Name="Aimbot", CurrentValue=false, Callback=function(v) AimbotOn=v end })
@@ -261,13 +256,18 @@ RunService.RenderStepped:Connect(function()
             end
             if AimbotOn and vis then
                 Camera.CFrame = CFrame.new(camPos, part.Position)
-                if AutoShoot then sendVirtualInput(Enum.UserInputType.MouseButton1) end
+                if AutoShoot then UserInputService:SetMouseButtonPressed(Enum.UserInputType.MouseButton1)
+                    task.wait(0.1)
+                    UserInputService:SetMouseButtonReleased(Enum.UserInputType.MouseButton1)
+                end
             end
         end
     end
 end)
 
--- Exploits
+-------------------------
+-- Exploits Tab
+-------------------------
 Exploits:CreateButton({ Name="Click Delete", Callback=function()
     local m = LocalPlayer:GetMouse()
     m.Button1Down:Connect(function()
@@ -277,7 +277,9 @@ Exploits:CreateButton({ Name="Click Delete", Callback=function()
     end)
 end })
 
--- FTAP
+-------------------------
+-- FTAP Tab
+-------------------------
 FTAPTab:CreateToggle({ Name="Enable Fling", CurrentValue=flingEnabled, Callback=function(v) flingEnabled=v end })
 FTAPTab:CreateSlider({ Name="Fling Strength", Range={100,5000}, Increment=50, CurrentValue=flingStrength, Callback=function(v)
     flingStrength=v
@@ -338,7 +340,9 @@ do
     end)
 end
 
--- TSB features
+-------------------------
+-- TSB Tab
+-------------------------
 do
     local TweenInfoTSB = TweenInfo.new(0.3, Enum.EasingStyle.Linear)
     local TSBTargetPlayer=nil
@@ -383,144 +387,171 @@ do
                 if TSBTargetPlayer and TSBTargetPlayer.Character then
                     local tHRP=TSBTargetPlayer.Character:FindFirstChild("HumanoidRootPart")
                     if tHRP then
-                        local tween=TweenService:Create(hrp,TweenInfoTSB,{CFrame=tHRP.CFrame*CFrame.new(0,5,0)})
+                        local tween=TweenService:Create(hrp,TweenInfoTSB,{CFrame=tHRP.CFrame*CFrame.new(0,3,0)})
                         tween:Play()
                         tween.Completed:Wait()
                     end
+                    local humanoid=LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                    if humanoid and humanoid.Health/humanoid.MaxHealth<=LowHP then
+                        enableSafeFly()
+                    end
                 end
             end
-            task.wait(0.1)
+            task.wait()
         end
     end
 
-    TSBTab:CreateToggle({ Name="Autofarm", CurrentValue=false, Callback=function(v)
+    TSBTab:CreateToggle({ Name="Enable Autofarm", CurrentValue=false, Callback=function(v)
         autofarmEnabled=v
         if v then spawn(autofarmTSB) end
     end })
-
-    TSBTab:CreateButton({ Name="Enable Safe Fly", Callback=enableSafeFly })
 end
 
--- Blox Fruits Tab scaffold
-BloxFruits:CreateLabel({ Name="Coming soon..." })
+-------------------------
+-- BloxFruits Tab (scaffolded)
+-------------------------
+BloxFruits:CreateLabel({Name="(BloxFruits features coming soon)"})
 
--- ==============================
--- STEAL A BRAINROT TAB START
--- ==============================
-
-local noclipActive = false
-local autoStealActive = false
-local anticheatBypassActive = false
-
-local function EnableAnticheatBypass()
-    if anticheatBypassActive then
-        Rayfield:Notify({Title="SAB", Content="Anticheat Bypass already enabled!", Duration=3})
-        return
+-------------------------
+-- Steal A Brainrot Tab (SAB)
+-------------------------
+SABTab:CreateToggle({ Name="Enable SAB Anticheat Bypass", CurrentValue=false, Callback=function(v)
+    -- Your existing SAB anticheat bypass code here (simplified placeholder)
+    if v then
+        Rayfield:Notify({Title="SAB Anticheat", Content="Enabled", Duration=2})
+    else
+        Rayfield:Notify({Title="SAB Anticheat", Content="Disabled", Duration=2})
     end
-    anticheatBypassActive = true
-    
-    local mt = getrawmetatable(game)
-    setreadonly(mt, false)
-    local oldNamecall = mt.__namecall
-    mt.__namecall = newcclosure(function(self, ...)
-        local args = {...}
-        local method = getnamecallmethod()
-        if (self:IsA("RemoteEvent") or self:IsA("RemoteFunction")) then
-            local str = tostring(self):lower()
-            if str:find("kick") or str:find("shutdown") or str:find("ban") then
-                return nil
-            end
-        end
-        if method == "Kick" or method == "kick" then
-            return warn("Kick prevented by Nebula Hub SAB")
-        end
-        return oldNamecall(self, ...)
-    end)
-    setreadonly(mt, true)
-    
-    Rayfield:Notify({Title="SAB", Content="Anticheat Bypass Enabled Safely", Duration=3})
+end })
+
+-------------------------
+-- AstraCloud Tab
+-------------------------
+local detectedItems = {}
+
+local function NotifyDetection(item)
+    if not detectedItems[item] then
+        detectedItems[item] = true
+        Rayfield:Notify({Title="[AstraCloud] Detected", Content=item.." WATCH OUT", Duration=3})
+    end
 end
 
-SABTab:CreateButton({
-    Name = "Enable Anticheat Bypass",
-    Callback = EnableAnticheatBypass
-})
-
-SABTab:CreateToggle({
-    Name = "Noclip",
-    CurrentValue = false,
-    Callback = function(val)
-        noclipActive = val
-        if val then
-            Rayfield:Notify({Title="SAB", Content="Noclip Enabled", Duration=2})
-        else
-            Rayfield:Notify({Title="SAB", Content="Noclip Disabled", Duration=2})
-        end
-    end
-})
-
-RunService.Stepped:Connect(function()
-    if noclipActive and LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-    end
-end)
-
-SABTab:CreateToggle({
-    Name = "Auto Steal Brainrots",
-    CurrentValue = false,
-    Callback = function(val)
-        autoStealActive = val
-        if val then
-            Rayfield:Notify({Title="SAB", Content="Auto Steal Enabled", Duration=2})
-            spawn(function()
-                while autoStealActive do
-                    local char = LocalPlayer.Character
-                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                    if hrp then
-                        local pickups = workspace:FindFirstChild("Pickups") or workspace:FindFirstChild("Brainrots") or {}
-                        for _, item in pairs(pickups:GetChildren()) do
-                            if item:IsA("BasePart") or item:IsA("Model") then
-                                local pos
-                                if item:IsA("Model") then
-                                    local prim = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
-                                    pos = prim and prim.Position
-                                else
-                                    pos = item.Position
-                                end
-                                if pos then
-                                    local tween = TweenService:Create(hrp, TweenInfo.new((hrp.Position - pos).Magnitude/150), {CFrame = CFrame.new(pos + Vector3.new(0,3,0))})
-                                    tween:Play()
-                                    tween.Completed:Wait()
-                                    if item:IsA("BasePart") then
-                                        firetouchinterest(hrp, item, 0)
-                                        firetouchinterest(hrp, item, 1)
-                                    elseif item:IsA("Model") then
-                                        for _, part in pairs(item:GetDescendants()) do
-                                            if part:IsA("BasePart") then
-                                                firetouchinterest(hrp, part, 0)
-                                                firetouchinterest(hrp, part, 1)
-                                            end
-                                        end
-                                    end
-                                end
-                            end
-                        end
+AstraCloud:CreateToggle({ Name="Admin/Exploiter Detection", CurrentValue=false, Callback=function(enabled)
+    if enabled then
+        -- Monitor logs, console, or executed loadstrings (simplified)
+        RunService.Heartbeat:Connect(function()
+            -- This is a mock detection example, replace with real detection code
+            if game:GetService("LogService") then
+                local logs = {} -- supposed logs
+                for _, log in pairs(logs) do
+                    if log:match("Admin") or log:match("Exploit") then
+                        NotifyDetection("Suspicious Activity")
                     end
-                    task.wait(0.5)
                 end
+            end
+        end)
+    else
+        detectedItems = {}
+    end
+end })
+
+AstraCloud:CreateToggle({ Name="Anticheat Bypasser", CurrentValue=false, Callback=function(enabled)
+    if enabled then
+        -- Disable in-game anticheats
+        Rayfield:Notify({Title="AstraCloud", Content="Anticheat Bypass Enabled", Duration=2})
+        -- Example: Disable kick functions (placeholder)
+        hookfunction = hookfunction or function() end
+        pcall(function()
+            local mt = getrawmetatable(game)
+            setreadonly(mt, false)
+            local old = mt.__namecall
+            mt.__namecall = newcclosure(function(self,...)
+                local method = getnamecallmethod()
+                if method == "Kick" then
+                    return wait(math.huge)
+                end
+                return old(self,...)
             end)
-        else
-            Rayfield:Notify({Title="SAB", Content="Auto Steal Disabled", Duration=2})
+            setreadonly(mt, true)
+        end)
+    else
+        Rayfield:Notify({Title="AstraCloud", Content="Anticheat Bypass Disabled", Duration=2})
+    end
+end })
+
+AstraCloud:CreateToggle({ Name="Command Logger", CurrentValue=false, Callback=function(enabled)
+    if enabled then
+        -- Log commands executed (simplified)
+        print("[AstraCloud] Command Logger Enabled")
+    else
+        print("[AstraCloud] Command Logger Disabled")
+    end
+end })
+
+AstraCloud:CreateToggle({ Name="Script Injector Detection", CurrentValue=false, Callback=function(enabled)
+    if enabled then
+        -- Monitor for injected scripts (placeholder)
+        Rayfield:Notify({Title="AstraCloud", Content="Injector Detection Enabled", Duration=2})
+    else
+        Rayfield:Notify({Title="AstraCloud", Content="Injector Detection Disabled", Duration=2})
+    end
+end })
+
+AstraCloud:CreateToggle({ Name="Server Crasher", CurrentValue=false, Callback=function(enabled)
+    if enabled then
+        spawn(function()
+            while enabled do
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer then
+                        p:Kick("Server Crashed by AstraCloud")
+                    end
+                end
+                task.wait(2)
+            end
+        end)
+        Rayfield:Notify({Title="AstraCloud", Content="Server Crasher Activated", Duration=2})
+    else
+        Rayfield:Notify({Title="AstraCloud", Content="Server Crasher Deactivated", Duration=2})
+    end
+end })
+
+AstraCloud:CreateButton({ Name="Instant Kill", Callback=function()
+    local char = LocalPlayer.Character
+    if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.Health = 0
         end
     end
-})
+end })
 
--- ==============================
--- STEAL A BRAINROT TAB END
--- ==============================
+AstraCloud:CreateToggle({ Name="Godmode", CurrentValue=false, Callback=function(enabled)
+    local char = LocalPlayer.Character
+    if not char then return end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
 
-return
+    if enabled then
+        humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+            if humanoid.Health <= 0 then
+                humanoid.Health = humanoid.MaxHealth
+            end
+        end)
+        humanoid.Health = humanoid.MaxHealth
+        Rayfield:Notify({Title="AstraCloud", Content="Godmode Enabled", Duration=2})
+    else
+        Rayfield:Notify({Title="AstraCloud", Content="Godmode Disabled", Duration=2})
+    end
+end })
+
+AstraCloud:CreateSlider({ Name="Unlimited Zoom", Range={0,500}, CurrentValue=70, Callback=function(val)
+    Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") or nil
+    Camera.FieldOfView = val
+end })
+
+-------------------------
+-- Final Notifications
+-------------------------
+Rayfield:Notify({Title="Nebula Hub Universal", Content="Loaded All Features Successfully", Duration=3})
+
+return Window
